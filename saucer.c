@@ -1,4 +1,5 @@
-/* CMPUT 379 - Assignment 3
+/* 
+ * CMPUT 379 - Assignment 3
  * Costa Zervos 
  */
 
@@ -10,19 +11,13 @@
 #define SAUCER "<--->" /* Enemy saucer shape */
 #define LAUNCHER "|" /* User launcher shape */
 
+void setup();
+
 int main(int argc, char *argv[])
 {
         int c; /* User input character */
 
-	/* Set up curses */
-        /* Initialize screen */
-	initscr();
-        /* Key input raises event */
-	crmode();
-        /* Key input isn't printed to screen */
-	noecho();
-        /* Clear the terminal */
-	clear();
+        setup();
 
         /* Game loop */
         while (1) {
@@ -33,4 +28,20 @@ int main(int argc, char *argv[])
         }
         endwin();
         return 0;
+}
+
+/*
+ * TODO add description for this function
+ * Sets up curses 
+ */
+void setup()
+{
+        /* Initialize screen */
+	initscr();
+        /* Key input raises event */
+	crmode();
+        /* Key input isn't printed to screen */
+	noecho();
+        /* Clear the terminal */
+	clear();
 }
