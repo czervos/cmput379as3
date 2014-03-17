@@ -2,7 +2,7 @@
 # Costa Zervos
 
 saucer: saucer.c
-	gcc saucer.c -o saucer
+	gcc saucer.c -lcurses -o saucer
 
 tar: README questions.txt *.c Makefile
 	tar cvf as3.tar design.txt README *.c Makefile
