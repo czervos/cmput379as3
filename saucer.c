@@ -5,12 +5,14 @@
 
 #include <stdio.h>
 #include <curses.h>
+#include <pthread.h>
 
 #define AMMO 10 /* Total number of rockets */
 #define LANES 3 /* Top lines enemy saucers can occupy */
 #define SAUCER "<--->" /* Enemy saucer shape */
 #define LAUNCHER "|" /* User launcher shape */
 #define MAX_PLAYERS 1 /* Max number of players that can play */
+#define MAX_THREADS 1 /* Max number of threads needed */
 
 struct propset {
         char *str; /* Look of prop */
@@ -25,8 +27,10 @@ int main(int argc, char *argv[])
 {
         int c; /* User input character */
         struct propset launcher_props[MAX_PLAYERS]; /* Player props */
+        pthread_t threads[MAX_THREADS];
 
         setup_curses();
+        setup_players(launcher_props);
 
         /* Game loop */
         while (1) {
