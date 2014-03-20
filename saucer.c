@@ -39,7 +39,9 @@ int main(int argc, char *argv[])
         setup_curses();
         setup_players(launcher_props);
 
+        /* Set up every needed thread */
         for (i=0; i < MAX_THREADS; i++) {
+            /* Create thread to execute animate_launcher function, else error */
             if (pthread_create(&threads[i], NULL, animate_launcher, &launcher_props)) {
                 fprintf(stderr, "Error creating thread\n");
                 endwin();
@@ -86,9 +88,12 @@ void setup_players(struct propset player_array[])
 {
         int i;
 
+        /* For every player prop */
         for (i=0; i < MAX_PLAYERS; i++) {
+            /* Set string of prop to launcher string */
             player_array[i].str = LAUNCHER;
-            player_array[i].row = LINES-1;
+            /* Set launcher row position */
+            player_array[i].row = LINES-2;
         }
 }
 
@@ -99,22 +104,23 @@ void setup_players(struct propset player_array[])
 void *animate_launcher(void *arg)
 {
         struct propset *prop = arg; /* Points to prop struct passed into function */
-        int col = (COLS/2);
+        int col = (COLS/2); /* Initializes prop column position to middle of screen */
 
-        mvprintw(prop->row, col, LAUNCHER);
+        mvprintw(prop->row, col, LAUNCHER); /* Prints prop at initial position */
 
         while(1) {
+            /* Waits for input from user to change the direction of launcher */
             while(prop->dir != 0) {
+                col += prop->dir; /* Sets prop column position to new position based on direction */
                 pthread_mutex_lock(&MX);
-                move(prop->row, col);
-                addch(' ');
-                addstr(prop->str);
-                addch(' ');
-                move(LINES-1, COLS-1);
-                refresh();
+                move(prop->row, col); /* Moves cursor to current prop location */
+                addch(' '); /* Puts a space there */
+                addstr(prop->str); /* Puts the prop string at the new prop location */
+                addch(' '); /* Puts a space after the prop string */
+                move(LINES-1, COLS-1); /* Parks cursor */
+                refresh(); /* Refreshes the screen */
                 pthread_mutex_unlock(&MX);
-                col += prop->dir;
-                prop->dir = 0;
+                prop->dir = 0; /* Sets direction to 0 */
             }
         }
 
