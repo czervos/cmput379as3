@@ -15,24 +15,25 @@
 #define MAX_PLAYERS 1 /* Max number of players that can play */
 #define MAX_THREADS 1 /* Max number of threads needed */
 
-struct propset {
-        char *str; /* Look of prop */
-        int row; /* Row prop appears on */
-        int dir; /* Direction of the prop */
-        int delay; /* Prop's delay in time units */
+struct launcher {
+        char *str; /* Look of launcher */
+        int row; /* Row launcher appears on */
+        int col; /* Column launcher appears on */
+        int dir; /* Direction of the launcher */
+        int delay; /* Launcher's delay in time units */
 };
 
 pthread_mutex_t MX = PTHREAD_MUTEX_INITIALIZER; /* Mutex lock */
 
 void setup_curses();
-void setup_players(struct propset[]);
+void setup_players(struct launcher[]);
 void *animate_launcher(void*);
 
 int main(int argc, char *argv[])
 {
         int c; /* User input character */
         int i;
-        struct propset launcher_props[MAX_PLAYERS]; /* Player props */
+        struct launcher launcher_props[MAX_PLAYERS]; /* Player props */
         pthread_t threads[MAX_THREADS];
         void *animate_launcher();
 
@@ -84,16 +85,18 @@ void setup_curses()
  * TODO add description for this function
  * Setup player props
  */
-void setup_players(struct propset player_array[])
+void setup_players(struct launcher player_array[])
 {
         int i;
 
-        /* For every player prop */
+        /* For every launcher */
         for (i=0; i < MAX_PLAYERS; i++) {
-            /* Set string of prop to launcher string */
+            /* Set string of launcher string */
             player_array[i].str = LAUNCHER;
             /* Set launcher row position */
             player_array[i].row = LINES-2;
+            /* Set launcher column posiition */
+            player_array[i].col = COLS/2;
         }
 }
 
@@ -103,24 +106,24 @@ void setup_players(struct propset player_array[])
  */
 void *animate_launcher(void *arg)
 {
-        struct propset *prop = arg; /* Points to prop struct passed into function */
-        int col = (COLS/2); /* Initializes prop column position to middle of screen */
+        struct launcher *player = arg; /* Points to launcher struct passed into function */
+        int col = (COLS/2); /* Initializes launcher column position to middle of screen */
 
-        mvprintw(prop->row, col, LAUNCHER); /* Prints prop at initial position */
+         mvprintw(player->row, col, LAUNCHER); /* Prints launcher at initial position */
 
         while(1) {
             /* Waits for input from user to change the direction of launcher */
-            while(prop->dir != 0) {
-                col += prop->dir; /* Sets prop column position to new position based on direction */
+            while(player->dir != 0) {
+                player->col += player->dir; /* Sets launcher column position to new position based on direction */
                 pthread_mutex_lock(&MX);
-                move(prop->row, col); /* Moves cursor to current prop location */
+                move(player->row, player->col); /* Moves cursor to current launcher location */
                 addch(' '); /* Puts a space there */
-                addstr(prop->str); /* Puts the prop string at the new prop location */
-                addch(' '); /* Puts a space after the prop string */
-                move(LINES-1, COLS-1); /* Parks cursor */
+                addstr(player->str); /* Puts the launcher string at the new launcher location */
+                addch(' '); /* Puts a space after the launcher string */
+                move(0, 0); /* Parks cursor */
                 refresh(); /* Refreshes the screen */
                 pthread_mutex_unlock(&MX);
-                prop->dir = 0; /* Sets direction to 0 */
+                player->dir = 0; /* Sets direction to 0 */
             }
         }
 
