@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <curses.h>
 #include <pthread.h>
+#include <stdlib.h>
 
 #define AMMO 10 /* Total number of rockets */
 #define LANES 3 /* Top lines enemy saucers can occupy */
@@ -17,20 +18,34 @@
 struct propset {
         char *str; /* Look of prop */
         int row; /* Row prop appears on */
+        int dir; /* Direction of the prop */
         int delay; /* Prop's delay in time units */
 };
 
+pthread_mutex_t MX = PTHREAD_MUTEX_INITIALIZER; /* Mutex lock */
+
 void setup_curses();
 void setup_players(struct propset[]);
+void *animate_launcher(void*);
 
 int main(int argc, char *argv[])
 {
         int c; /* User input character */
+        int i;
         struct propset launcher_props[MAX_PLAYERS]; /* Player props */
         pthread_t threads[MAX_THREADS];
+        void *animate_launcher();
 
         setup_curses();
         setup_players(launcher_props);
+
+        for (i=0; i < MAX_THREADS; i++) {
+            if (pthread_create(&threads[i], NULL, animate_launcher, &launcher_props)) {
+                fprintf(stderr, "Error creating thread\n");
+                endwin();
+                exit(0);
+            }
+        }
 
         /* Game loop */
         while (1) {
@@ -38,6 +53,10 @@ int main(int argc, char *argv[])
             /* Quit the game */
             if (c == 'Q')
                     break;
+            if (c == ',')
+                    launcher_props[0].dir = -1;
+            if (c == '.')
+                    launcher_props[0].dir = 1;
         }
         endwin();
         return 0;
@@ -69,6 +88,34 @@ void setup_players(struct propset player_array[])
 
         for (i=0; i < MAX_PLAYERS; i++) {
             player_array[i].str = LAUNCHER;
-            player_array[i].row = 0;
+            player_array[i].row = LINES-1;
         }
+}
+
+/*
+ * TODO add description for this function
+ * Animate the player's prop
+ */
+void *animate_launcher(void *arg)
+{
+        struct propset *prop = arg; /* Points to prop struct passed into function */
+        int col = (COLS/2);
+
+        mvprintw(prop->row, col, LAUNCHER);
+
+        while(1) {
+            while(prop->dir != 0) {
+                pthread_mutex_lock(&MX);
+                move(prop->row, col);
+                addch(' ');
+                addstr(prop->str);
+                addch(' ');
+                move(LINES-1, COLS-1);
+                refresh();
+                pthread_mutex_unlock(&MX);
+                col += prop->dir;
+                prop->dir = 0;
+            }
+        }
+
 }
