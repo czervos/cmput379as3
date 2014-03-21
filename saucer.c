@@ -7,11 +7,11 @@
 #include <curses.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define AMMO 10 /* Total number of rockets */
 #define LANES 3 /* Top lines enemy saucers can occupy */
-#define SAUCER "<--->" /* Enemy saucer shape */
-#define LAUNCHER "|" /* User launcher shape */
+#define SAUCER "<--->" /* Enemy saucer shape */ // TODO remove and change to a string like launcher
 #define MAX_PLAYERS 1 /* Max number of players that can play */
 #define MAX_THREADS 1 /* Max number of threads needed */
 
@@ -20,14 +20,13 @@ struct launcher {
         int row; /* Row launcher appears on */
         int col; /* Column launcher appears on */
         int dir; /* Direction of the launcher */
-        int delay; /* Launcher's delay in time units */
 };
 
 pthread_mutex_t MX = PTHREAD_MUTEX_INITIALIZER; /* Mutex lock */
 
 void setup_curses();
-void setup_players(struct launcher[]);
-void *animate_launcher(void*);
+void setup_players(struct launcher[], char *);
+void *animate_launcher(void *);
 
 int main(int argc, char *argv[])
 {
@@ -36,9 +35,10 @@ int main(int argc, char *argv[])
         struct launcher launcher_props[MAX_PLAYERS]; /* Player props */
         pthread_t threads[MAX_THREADS];
         void *animate_launcher();
+        char *launcher = "|"; /* User launcher shape */
 
         setup_curses();
-        setup_players(launcher_props);
+        setup_players(launcher_props, launcher);
 
         /* Set up every needed thread */
         for (i=0; i < MAX_THREADS; i++) {
@@ -54,6 +54,7 @@ int main(int argc, char *argv[])
         while (1) {
             c = getch();
             /* Quit the game */
+            // TODO switch to switch
             if (c == 'Q')
                     break;
             if (c == ',')
@@ -85,18 +86,20 @@ void setup_curses()
  * TODO add description for this function
  * Setup player props
  */
-void setup_players(struct launcher player_array[])
+void setup_players(struct launcher player_array[], char *launcher_str)
 {
         int i;
 
         /* For every launcher */
         for (i=0; i < MAX_PLAYERS; i++) {
             /* Set string of launcher string */
-            player_array[i].str = LAUNCHER;
+            player_array[i].str = launcher_str;
             /* Set launcher row position */
             player_array[i].row = LINES-2;
             /* Set launcher column posiition */
             player_array[i].col = COLS/2;
+            /* Set launcher direction */
+            player_array[i].dir = 0;
         }
 }
 
@@ -107,20 +110,26 @@ void setup_players(struct launcher player_array[])
 void *animate_launcher(void *arg)
 {
         struct launcher *player = arg; /* Points to launcher struct passed into function */
-        int col = (COLS/2); /* Initializes launcher column position to middle of screen */
 
-         mvprintw(player->row, col, LAUNCHER); /* Prints launcher at initial position */
+        // TODO why doesn't this mvprintw work?
+        //mvprintw(player->row, player->col, LAUNCHER); /* Prints launcher at initial position */
+        pthread_mutex_lock(&MX);
+        move(player->row, player->col); /* Go to current location of launcher */
+        addstr(player->str); /* Puts the launcher string at the launcher location */
+        move(LINES-1, COLS-1); /* Parks cursor */
+        refresh(); /* Refreshes the screen */
+        pthread_mutex_unlock(&MX);
 
         while(1) {
             /* Waits for input from user to change the direction of launcher */
             while(player->dir != 0) {
-                player->col += player->dir; /* Sets launcher column position to new position based on direction */
                 pthread_mutex_lock(&MX);
+                move(player->row, player->col); /* Go to last location of launcher */
+                addch(' '); /* Replace with a space */
+                player->col += player->dir; /* Sets launcher column position to new position based on direction */
                 move(player->row, player->col); /* Moves cursor to current launcher location */
-                addch(' '); /* Puts a space there */
                 addstr(player->str); /* Puts the launcher string at the new launcher location */
-                addch(' '); /* Puts a space after the launcher string */
-                move(0, 0); /* Parks cursor */
+                move(LINES-1, COLS-1); /* Parks cursor */
                 refresh(); /* Refreshes the screen */
                 pthread_mutex_unlock(&MX);
                 player->dir = 0; /* Sets direction to 0 */
