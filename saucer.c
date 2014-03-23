@@ -32,14 +32,15 @@ Top left corner of terminal (0 0)
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #define AMMO 10 /* Total number of rockets */
 #define LANES 3 /* Top lines enemy saucers can occupy */
 #define SAUCER "<--->" /* Enemy saucer shape */ // TODO remove and change to a string like launcher
 #define ROCKET "^" /* Rocket shape */
 #define MAX_PLAYERS 1 /* Max number of players that can play */
-#define MAX_THREADS 1 /* Max number of threads needed */
 #define MAX_ROCKETS 30 /* Max number of rockets on screen */
+#define TUNIT 20000 /* Time unit in microseconds */
 
 struct launcher {
         char *str; /* Look of launcher */
@@ -56,31 +57,33 @@ struct rocket {
 };
 
 pthread_mutex_t MX = PTHREAD_MUTEX_INITIALIZER; /* Mutex lock */
-struct rocket ROCKET_PROPS[MAX_ROCKETS];
 
 void setup_curses();
 void setup_players(struct launcher[], char *);
 void setup_rockets(struct rocket[]);
 void *animate_launcher(void *);
+void *animate_rocket(void *);
 
 int main(int argc, char *argv[])
 {
         int c; /* User input character */
         int i;
         struct launcher launcher_props[MAX_PLAYERS]; /* Player props */
-        pthread_t threads[MAX_THREADS];
+        struct rocket rocket_props[MAX_ROCKETS];
+        pthread_t launcher_threads[MAX_PLAYERS];
         pthread_t rocket_threads[MAX_ROCKETS];
         void *animate_launcher();
+        void *animate_rocket();
         char *launcher = "|"; /* User launcher shape */
 
         setup_curses();
         setup_players(launcher_props, launcher);
-        setup_rockets(ROCKET_PROPS);
+        setup_rockets(rocket_props);
 
-        /* Set up every needed thread */
-        for (i=0; i < MAX_THREADS; i++) {
+        /* Set up every needed player thread */
+        for (i=0; i < MAX_PLAYERS; i++) {
             /* Create thread to execute animate_launcher function, else error */
-            if (pthread_create(&threads[i], NULL, animate_launcher, &launcher_props[i])) {
+            if (pthread_create(&launcher_threads[i], NULL, animate_launcher, &launcher_props[i])) {
                 fprintf(stderr, "Error creating thread\n");
                 endwin();
                 exit(0);
@@ -100,10 +103,14 @@ int main(int argc, char *argv[])
                     launcher_props[0].dir = 1;
             if (c == ' ') {
                 for (i=0; i < MAX_ROCKETS; i++) {
-                    if (ROCKET_PROPS[i].live == 0)
-                            break;
+                    if (rocket_props[i].live == 0) {
+                        rocket_props[i].row = launcher_props[0].row - 1;
+                        rocket_props[i].col = launcher_props[0].col;
+                        rocket_props[i].live = 1;
+                        break;
+                    }
                 }
-                //pthread_create(&rocket_threads[i], NULL, animate_rocket, &rocket_props);
+                pthread_create(&rocket_threads[i], NULL, animate_rocket, &rocket_props[i]);
             }
         }
 // TODO must close threads when done
@@ -215,4 +222,51 @@ void *animate_launcher(void *arg)
 //              refresh(); /* Refreshes the screen */
 //              pthread_mutex_unlock(&MX);
 // player->dir = 0; /* Sets direction to 0 */
+
+/*
+ * TODO add description for this function
+ * Animate the rocket prop
+ */
+void *animate_rocket(void *arg)
+{
+        struct rocket *myrocket = arg;
+
+        /* Displays initial rocket */
+        pthread_mutex_lock(&MX);
+        move(myrocket->row, myrocket->col);
+        addstr(myrocket->str);
+        move(LINES-1, COLS-1);
+        refresh();
+        pthread_mutex_unlock(&MX);
+
+        /* Animates rocket upward while rocket position is not 0 */
+        while(myrocket->row) {
+            usleep(TUNIT);
+
+            pthread_mutex_lock(&MX);
+            move(myrocket->row, myrocket->col);
+            addch(' ');
+            myrocket->row -= 1;
+            move(myrocket->row, myrocket->col);
+            addstr(myrocket->str);
+            move(LINES-1, COLS-1);
+            refresh();
+            pthread_mutex_unlock(&MX);
+        }
+
+        /* Remove last visible instance of rocket */
+        usleep(TUNIT);
+        pthread_mutex_lock(&MX);
+        move(myrocket->row, myrocket->col);
+        addch(' ');
+        move(LINES-1, COLS-1);
+        refresh();
+        pthread_mutex_unlock(&MX);
+
+        /* Cleanup before exiting thread */
+        myrocket->live = 0;
+        myrocket->row = 0;
+        myrocket->col = 0;
+        pthread_exit(NULL); // TODO difference between this and pthread_cancel in terms of threads array?
+}
 
