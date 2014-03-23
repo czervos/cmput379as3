@@ -36,8 +36,10 @@ Top left corner of terminal (0 0)
 #define AMMO 10 /* Total number of rockets */
 #define LANES 3 /* Top lines enemy saucers can occupy */
 #define SAUCER "<--->" /* Enemy saucer shape */ // TODO remove and change to a string like launcher
+#define ROCKET "^" /* Rocket shape */
 #define MAX_PLAYERS 1 /* Max number of players that can play */
 #define MAX_THREADS 1 /* Max number of threads needed */
+#define MAX_ROCKETS 30 /* Max number of rockets on screen */
 
 struct launcher {
         char *str; /* Look of launcher */
@@ -46,10 +48,19 @@ struct launcher {
         int dir; /* Direction of the launcher */
 };
 
+struct rocket {
+        char *str; /* Look of rocket */
+        int row; /* Row location */
+        int col; /* Column location */
+        int live; /* Flag indicating whether or not rocket is active */
+};
+
 pthread_mutex_t MX = PTHREAD_MUTEX_INITIALIZER; /* Mutex lock */
+struct rocket ROCKET_PROPS[MAX_ROCKETS];
 
 void setup_curses();
 void setup_players(struct launcher[], char *);
+void setup_rockets(struct rocket[]);
 void *animate_launcher(void *);
 
 int main(int argc, char *argv[])
@@ -58,16 +69,18 @@ int main(int argc, char *argv[])
         int i;
         struct launcher launcher_props[MAX_PLAYERS]; /* Player props */
         pthread_t threads[MAX_THREADS];
+        pthread_t rocket_threads[MAX_ROCKETS];
         void *animate_launcher();
         char *launcher = "|"; /* User launcher shape */
 
         setup_curses();
         setup_players(launcher_props, launcher);
+        setup_rockets(ROCKET_PROPS);
 
         /* Set up every needed thread */
         for (i=0; i < MAX_THREADS; i++) {
             /* Create thread to execute animate_launcher function, else error */
-            if (pthread_create(&threads[i], NULL, animate_launcher, &launcher_props)) {
+            if (pthread_create(&threads[i], NULL, animate_launcher, &launcher_props[i])) {
                 fprintf(stderr, "Error creating thread\n");
                 endwin();
                 exit(0);
@@ -85,6 +98,13 @@ int main(int argc, char *argv[])
                     launcher_props[0].dir = -1;
             if (c == '.')
                     launcher_props[0].dir = 1;
+            if (c == ' ') {
+                for (i=0; i < MAX_ROCKETS; i++) {
+                    if (ROCKET_PROPS[i].live == 0)
+                            break;
+                }
+                //pthread_create(&rocket_threads[i], NULL, animate_rocket, &rocket_props);
+            }
         }
 // TODO must close threads when done
         endwin();
@@ -127,6 +147,21 @@ void setup_players(struct launcher player_array[], char *launcher_str)
             player_array[i].col = (COLS-1)/2;
             /* Set launcher direction */
             player_array[i].dir = 0;
+        }
+}
+
+/*
+ * TODO add description for this function
+ * Setup rocket props
+ */
+void setup_rockets(struct rocket rocket_array[])
+{
+        int i;
+        for (i=0; i < MAX_ROCKETS; i++) {
+            rocket_array[i].str = ROCKET;
+            rocket_array[i].row = 0;
+            rocket_array[i].col = 0;
+            rocket_array[i].live = 0;
         }
 }
 
