@@ -138,14 +138,8 @@ void *animate_launcher(void *arg)
 {
         struct launcher *player = arg; /* Points to launcher struct passed into function */
 
-        // TODO why doesn't this mvprintw work?
-        //mvprintw(player->row, player->col, player->str); /* Prints launcher at initial position */
-        //pthread_mutex_lock(&MX);
-        //move(player->row, player->col); /* Go to current location of launcher */
-        //addstr(player->str); /* Puts the launcher string at the launcher location */
-        //move(LINES-1, COLS-1); /* Parks cursor */
-        //refresh(); /* Refreshes the screen */
-        //pthread_mutex_unlock(&MX);
+        mvprintw(player->row, player->col, player->str); /* Prints launcher at initial position */
+        refresh();
 
         while(1) {
             /* Waits for input from user to change the direction of launcher */
@@ -153,12 +147,12 @@ void *animate_launcher(void *arg)
                 pthread_mutex_lock(&MX);
                     move(player->row, player->col); /* Go to last location of launcher */
                     addch(' '); /* Replace with a space */
-                    refresh();
+                    //refresh();
                     player->col += player->dir; /* Sets launcher column position to new position based on direction */
                     move(player->row, player->col); /* Moves cursor to current launcher location */
                     addstr(player->str); /* Puts the launcher string at the new launcher location */
                     addch(' '); /* Replace with a space */
-                    refresh();
+                    //refresh();
                     move(LINES-1, COLS-1); /* Parks cursor */
                     refresh(); /* Refreshes the screen */
                 pthread_mutex_unlock(&MX);
