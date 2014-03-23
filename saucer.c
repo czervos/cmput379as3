@@ -148,7 +148,15 @@ void *animate_launcher(void *arg)
                     move(player->row, player->col); /* Go to last location of launcher */
                     addch(' '); /* Replace with a space */
                     //refresh();
-                    player->col += player->dir; /* Sets launcher column position to new position based on direction */
+                    /* Check if launcher is on one of the sides of the terminal */
+                    if ((player->dir == 1) && (player->col != COLS-1)) {
+                        /* Sets launcher column position to new position based on direction */
+                        player->col += player->dir; 
+                    }
+                    else if ((player->dir == -1) && (player->col != 0)) {
+                        /* Sets launcher column position to new position based on direction */
+                        player->col += player->dir; 
+                    }
                     move(player->row, player->col); /* Moves cursor to current launcher location */
                     addstr(player->str); /* Puts the launcher string at the new launcher location */
                     addch(' '); /* Replace with a space */
