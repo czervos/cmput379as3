@@ -40,6 +40,7 @@ Top left corner of terminal (0 0)
 #define ROCKET "^" /* Rocket shape */
 #define MAX_PLAYERS 1 /* Max number of players that can play */
 #define MAX_ROCKETS 30 /* Max number of rockets on screen */
+#define MAX_SAUCERS 10 /* Max number of saucers on screen */
 #define TUNIT 20000 /* Time unit in microseconds */
 
 struct launcher {
@@ -56,13 +57,24 @@ struct rocket {
         int live; /* Flag indicating whether or not rocket is active */
 };
 
+struct saucer {
+        char *str; /* Look of rocket */
+        int row; /* Row location */
+        int col; /* Column location */
+        int delay; /* Delay time unit for animation */
+        int live; /* Flag indicating whether or not rocket is active */
+};
+
 pthread_mutex_t MX = PTHREAD_MUTEX_INITIALIZER; /* Mutex lock */
 
 void setup_curses();
 void setup_players(struct launcher[], char *);
 void setup_rockets(struct rocket[]);
+void setup_saucers(struct saucer[]);
 void *animate_launcher(void *);
 void *animate_rocket(void *);
+void *animate_saucer(void *);
+void *saucer_factory(void *);
 
 int main(int argc, char *argv[])
 {
@@ -70,15 +82,21 @@ int main(int argc, char *argv[])
         int i;
         struct launcher launcher_props[MAX_PLAYERS]; /* Player props */
         struct rocket rocket_props[MAX_ROCKETS];
+        struct saucer saucer_props[MAX_SAUCERS];
         pthread_t launcher_threads[MAX_PLAYERS];
         pthread_t rocket_threads[MAX_ROCKETS];
+        pthread_t saucer_factory_thread;
         void *animate_launcher();
         void *animate_rocket();
         char *launcher = "|"; /* User launcher shape */
 
+        /* Creates random seed based on pid */
+        srand(getpid());
+
         setup_curses();
         setup_players(launcher_props, launcher);
         setup_rockets(rocket_props);
+        setup_saucers(saucer_props);
 
         /* Set up every needed player thread */
         for (i=0; i < MAX_PLAYERS; i++) {
@@ -89,6 +107,8 @@ int main(int argc, char *argv[])
                 exit(0);
             }
         }
+
+        pthread_create(&saucer_factory_thread, NULL, saucer_factory, &saucer_props);
 
         /* Game loop */
         while (1) {
@@ -102,7 +122,7 @@ int main(int argc, char *argv[])
             if (c == '.')
                     launcher_props[0].dir = 1;
             if (c == ' ') {
-                for (i=0; i < MAX_ROCKETS; i++) {
+                for (i=0; i < MAX_ROCKETS; i++) { // TODO what to do when all MAX_ROCKETS are on screen?
                     if (rocket_props[i].live == 0) {
                         rocket_props[i].row = launcher_props[0].row - 1;
                         rocket_props[i].col = launcher_props[0].col;
@@ -110,7 +130,7 @@ int main(int argc, char *argv[])
                         break;
                     }
                 }
-                pthread_create(&rocket_threads[i], NULL, animate_rocket, &rocket_props[i]);
+                pthread_create(&rocket_threads[i], NULL, animate_rocket, &rocket_props[i]); // TODO error case
             }
         }
 // TODO must close threads when done
@@ -169,6 +189,22 @@ void setup_rockets(struct rocket rocket_array[])
             rocket_array[i].row = 0;
             rocket_array[i].col = 0;
             rocket_array[i].live = 0;
+        }
+}
+
+/*
+ * TODO add description for this function
+ * Setup saucer props
+ */
+void setup_saucers(struct saucer saucer_array[])
+{
+        int i;
+        for (i=0; i < MAX_SAUCERS; i++) {
+            saucer_array[i].str = SAUCER;
+            saucer_array[i].row = 0;
+            saucer_array[i].col = 0;
+            saucer_array[i].delay = 0;
+            saucer_array[i].live = 0;
         }
 }
 
@@ -268,5 +304,71 @@ void *animate_rocket(void *arg)
         myrocket->row = 0;
         myrocket->col = 0;
         pthread_exit(NULL); // TODO difference between this and pthread_cancel in terms of threads array?
+}
+
+/*
+ * TODO add description for this function
+ * Animate the saucer prop
+ */
+void *animate_saucer(void *arg)
+{
+        struct saucer *mysaucer = arg;
+
+        while(1) {
+            /* Break if reach end of terminal */
+            if (mysaucer->col + strlen(SAUCER) >= COLS)
+                    break;
+
+            usleep(mysaucer->delay * TUNIT);
+
+            pthread_mutex_lock(&MX);
+            move(mysaucer->row, mysaucer->col);
+            addch(' ');
+            addstr(mysaucer->str);
+            addch(' ');
+            move(LINES-1, COLS-1);
+            refresh();
+            pthread_mutex_unlock(&MX);
+
+            mysaucer->col += 1;
+        }
+
+        /* Cleanup and exit thread */
+        mysaucer->live = 0;
+        mysaucer->row = 0;
+        mysaucer->col = 0;
+        mysaucer->delay = 0;
+        pthread_exit(NULL);
+}
+
+/*
+ * TODO add description for this function
+ * Creates saucers
+ */
+void *saucer_factory(void *arg)
+{
+        struct saucer *saucer_array = arg;
+        pthread_t saucer_threads[MAX_SAUCERS];
+        void *animate_saucer();
+        int i;
+
+        /* Factory loop */
+        while (1) {
+            /* Sleeps for random period between 1 and 5 seconds */
+            sleep(1+ rand()%5);
+
+            for (i=0; i < MAX_SAUCERS; i++) { // TODO what to do when all MAX_SAUCERS are on screen?
+                if (saucer_array[i].live == 0) {
+                    /* Generates random row value between 0 and 2 */
+                    saucer_array->row = rand()%3;
+                    saucer_array->col = 0;
+                    /* Generates delay value of 1 plus random # between 0 and 14 - ie random number between 1 and 15 */
+                    saucer_array->delay = 1 + (rand()%15);
+                    saucer_array->live = 1;
+                    break;
+                }
+            }
+            pthread_create(&saucer_threads[i], NULL, animate_saucer, &saucer_array[i]); // TODO error case
+        }
 }
 
