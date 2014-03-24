@@ -117,9 +117,9 @@ int main(int argc, char *argv[])
             // TODO switch to switch
             if (c == 'Q')
                     break;
-            if (c == ',')
+            if (c == KEY_LEFT)
                     launcher_props[0].dir = -1;
-            if (c == '.')
+            if (c == KEY_RIGHT)
                     launcher_props[0].dir = 1;
             if (c == ' ') {
                 for (i=0; i < MAX_ROCKETS; i++) { // TODO what to do when all MAX_ROCKETS are on screen?
@@ -150,6 +150,8 @@ void setup_curses()
 	crmode();
         /* Key input isn't printed to screen */
 	noecho();
+        /* Enables keypad input */
+        keypad(stdscr, TRUE);
         /* Clear the terminal */
 	clear();
         /* Parks cursor */
