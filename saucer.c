@@ -313,6 +313,7 @@ void *animate_rocket(void *arg)
 void *animate_saucer(void *arg)
 {
         struct saucer *mysaucer = arg;
+        char *blank = "     ";
 
         while(1) {
             /* Break if reach end of terminal */
@@ -332,6 +333,14 @@ void *animate_saucer(void *arg)
 
             mysaucer->col += 1;
         }
+
+        /* Remove saucer upon exiting screen */
+        pthread_mutex_lock(&MX);
+        move(mysaucer->row, mysaucer->col);
+        addstr(blank);
+        move(LINES-1, COLS-1);
+        refresh();
+        pthread_mutex_unlock(&MX);
 
         /* Cleanup and exit thread */
         mysaucer->live = 0;
