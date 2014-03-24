@@ -216,37 +216,63 @@ void *animate_launcher(void *arg)
 {
         struct launcher *player = arg; /* Points to launcher struct passed into function */
 
-        mvprintw(player->row, player->col, player->str); /* Prints launcher at initial position */
+        /* Prints launcher at initial position */
+        mvprintw(player->row, player->col, player->str);
         refresh();
 
         while(1) {
+            /* Brief pause needed for curses not to output garbage when moving */
+            usleep(TUNIT);
             /* Waits for input from user to change the direction of launcher */
-            while(player->dir != 0) {
+            if (player->dir != 0) {
+                /* Check if launcher is on one of the sides of the terminal */
+                if ((player->dir == 1) && (player->col != COLS-1)) {
+                    /* Sets launcher column position to new position based on direction */
+                    player->col += player->dir; 
+                }
+                else if ((player->dir == -1) && (player->col != 0)) {
+                    /* Sets launcher column position to new position based on direction */
+                    player->col += player->dir; 
+                }
                 pthread_mutex_lock(&MX);
-                    move(player->row, player->col); /* Go to last location of launcher */
-                    addch(' '); /* Replace with a space */
-                    //refresh();
-                    /* Check if launcher is on one of the sides of the terminal */
-                    if ((player->dir == 1) && (player->col != COLS-1)) {
-                        /* Sets launcher column position to new position based on direction */
-                        player->col += player->dir; 
-                    }
-                    else if ((player->dir == -1) && (player->col != 0)) {
-                        /* Sets launcher column position to new position based on direction */
-                        player->col += player->dir; 
-                    }
-                    move(player->row, player->col); /* Moves cursor to current launcher location */
-                    addstr(player->str); /* Puts the launcher string at the new launcher location */
-                    addch(' '); /* Replace with a space */
-                    //refresh();
-                    move(LINES-1, COLS-1); /* Parks cursor */
-                    refresh(); /* Refreshes the screen */
+                move(player->row, player->col-1); /* Moves cursor to left of current launcher location */
+                addch(' ');
+                addstr(player->str); /* Puts the launcher string at the new launcher location */
+                addch(' '); /* Replace with a space */
+                //refresh();
+                move(LINES-1, COLS-1); /* Parks cursor */
+                refresh(); /* Refreshes the screen */
                 pthread_mutex_unlock(&MX);
-
+                
                 player->dir = 0; /* Sets direction to 0 */
             }
         }
 }
+
+// OLD
+                /* pthread_mutex_lock(&MX); */
+                /*     move(player->row, player->col); /\* Go to last location of launcher *\/ */
+                /*     addch(' '); /\* Replace with a space *\/ */
+                /*     //refresh(); */
+                /*     /\* Check if launcher is on one of the sides of the terminal *\/ */
+                /*     if ((player->dir == 1) && (player->col != COLS-1)) { */
+                /*         /\* Sets launcher column position to new position based on direction *\/ */
+                /*         player->col += player->dir;  */
+                /*     } */
+                /*     else if ((player->dir == -1) && (player->col != 0)) { */
+                /*         /\* Sets launcher column position to new position based on direction *\/ */
+                /*         player->col += player->dir;  */
+                /*     } */
+                /*     move(player->row, player->col); /\* Moves cursor to current launcher location *\/ */
+                /*     addstr(player->str); /\* Puts the launcher string at the new launcher location *\/ */
+                /*     addch(' '); /\* Replace with a space *\/ */
+                /*     //refresh(); */
+                /*     move(LINES-1, COLS-1); /\* Parks cursor *\/ */
+                /*     refresh(); /\* Refreshes the screen *\/ */
+                /* pthread_mutex_unlock(&MX); */
+
+                /* player->dir = 0; /\* Sets direction to 0 *\/ */
+
 
 //              pthread_mutex_lock(&MX);
 //              move(player->row, player->col); /* Go to last location of launcher */
