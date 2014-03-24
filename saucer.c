@@ -360,11 +360,11 @@ void *saucer_factory(void *arg)
             for (i=0; i < MAX_SAUCERS; i++) { // TODO what to do when all MAX_SAUCERS are on screen?
                 if (saucer_array[i].live == 0) {
                     /* Generates random row value between 0 and 2 */
-                    saucer_array->row = rand()%3;
-                    saucer_array->col = 0;
+                    saucer_array[i].row = rand()%3;
+                    saucer_array[i].col = 0;
                     /* Generates delay value of 1 plus random # between 0 and 14 - ie random number between 1 and 15 */
-                    saucer_array->delay = 1 + (rand()%15);
-                    saucer_array->live = 1;
+                    saucer_array[i].delay = 1 + (rand()%15);
+                    saucer_array[i].live = 1;
                     break;
                 }
             }
