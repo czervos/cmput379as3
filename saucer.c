@@ -67,6 +67,8 @@ struct saucer {
 };
 
 pthread_mutex_t MX = PTHREAD_MUTEX_INITIALIZER; /* Mutex lock */
+int QUIT_FLAG = 0; /* Inidicates whether game should be quit */
+int LAUNCH_FLAG = 0; /* Indicates whether a rocket should be launched */
 
 void setup_curses();
 void setup_players(struct launcher[]);
@@ -76,10 +78,10 @@ void *animate_launcher(void *);
 void *animate_rocket(void *);
 void *animate_saucer(void *);
 void *saucer_factory(void *);
+void *control_input(void *);
 
 int main(int argc, char *argv[])
 {
-        int c; /* User input character */
         int i;
         struct launcher launcher_props[MAX_PLAYERS]; /* Player props */
         struct rocket rocket_props[MAX_ROCKETS];
@@ -87,6 +89,7 @@ int main(int argc, char *argv[])
         pthread_t launcher_threads[MAX_PLAYERS];
         pthread_t rocket_threads[MAX_ROCKETS];
         pthread_t saucer_factory_thread;
+        pthread_t control_thread;
         void *animate_launcher();
         void *animate_rocket();
 
@@ -108,6 +111,7 @@ int main(int argc, char *argv[])
             }
         }
 
+        pthread_create(&control_thread, NULL, control_input, &launcher_props);
         pthread_create(&saucer_factory_thread, NULL, saucer_factory, &saucer_props);
 
 /* TODO maybe have a separate thread for controls:
@@ -118,17 +122,8 @@ int main(int argc, char *argv[])
  */
 
         /* Game loop */
-        while (1) {
-            c = getch();
-            /* Quit the game */
-            // TODO switch to switch
-            if (c == 'Q')
-                    break;
-            if (c == KEY_LEFT)
-                    launcher_props[0].dir = -1;
-            if (c == KEY_RIGHT)
-                    launcher_props[0].dir = 1;
-            if (c == ' ') {
+        while (!QUIT_FLAG) {
+            if (LAUNCH_FLAG == 1) {
                 for (i=0; i < MAX_ROCKETS; i++) { // TODO what to do when all MAX_ROCKETS are on screen?
                     if (rocket_props[i].live == 0) {
                         rocket_props[i].row = launcher_props[0].row - 1;
@@ -137,6 +132,7 @@ int main(int argc, char *argv[])
                         break;
                     }
                 }
+                LAUNCH_FLAG = 0;
                 pthread_create(&rocket_threads[i], NULL, animate_rocket, &rocket_props[i]); // TODO error case
             }
         }
@@ -399,5 +395,33 @@ void *saucer_factory(void *arg)
             }
             pthread_create(&saucer_threads[i], NULL, animate_saucer, &saucer_array[i]); // TODO error case
         }
+        // TODO exit the thread
 }
 
+/*
+ * TODO add description for this function
+ * Detects control input
+ */
+void *control_input(void *arg)
+{
+        struct launcher *launcher_array = arg;
+        int c;
+
+        /* Input loop */
+        while (1) {
+            c = getch();
+            /* Quit the game */
+            // TODO switch to switch
+            if (c == 'Q') {
+                QUIT_FLAG = 1;
+                break;
+            }
+            if (c == KEY_LEFT)
+                    launcher_array[0].dir = -1;
+            if (c == KEY_RIGHT)
+                    launcher_array[0].dir = 1;
+            if (c == ' ')
+                    LAUNCH_FLAG = 1;
+        }
+        pthread_exit(NULL);
+}
