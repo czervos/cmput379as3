@@ -277,7 +277,7 @@ void *animate_rocket(void *arg)
 {
         struct rocket *myrocket = arg;
 
-        /* Displays initial rocket so that it doesn't cover the launcher*/
+        /* Displays initial rocket so that it doesn't cover the launcher */
         usleep(TUNIT);
         pthread_mutex_lock(&MX);
         move(myrocket->row, myrocket->col);
@@ -326,30 +326,39 @@ void *animate_saucer(void *arg)
         struct saucer *mysaucer = arg;
         char *blank = "     ";
 
-        while(1) {
-            /* Break if reach end of terminal */
-            if (mysaucer->col + strlen(SAUCER) >= COLS)
-                    break;
-
+        /* 
+         * While saucer position + length of saucer is less than the terminal width
+         * Note: terminal width is from 0 to COLS; visible terminal width is from 0 to COLS-1
+         */
+        while((mysaucer->col + (strlen(SAUCER) - 1)) < COLS) {
+            /* Delay sets the speed of the launcher crossing the screen */
             usleep(mysaucer->delay * TUNIT);
 
             pthread_mutex_lock(&MX);
-            move(mysaucer->row, mysaucer->col);
-            addch(' ');
-            addstr(mysaucer->str);
-            addch(' ');
-            move(LINES-1, COLS-1);
+            /* Draws first saucer without a space in front of it */
+            if (mysaucer->col == 0) {
+                move(mysaucer->row, mysaucer->col);
+                addstr(mysaucer->str);
+                move(LINES-1, COLS-1);
+            }
+            /* Draws remaining instances of the saucer */
+            else {
+                move(mysaucer->row, mysaucer->col-1); /* Move cursor to old location */
+                addch(' '); /* Remove front of old launcher */
+                addstr(mysaucer->str); /* Draw new launcher at new position */
+            }
+            move(LINES-1, COLS-1); /* Park cursor */
             refresh();
             pthread_mutex_unlock(&MX);
 
-            mysaucer->col += 1;
+            mysaucer->col += 1; /* Increment saucer position */
         }
 
         /* Remove saucer upon exiting screen */
         pthread_mutex_lock(&MX);
-        move(mysaucer->row, mysaucer->col);
-        addstr(blank);
-        move(LINES-1, COLS-1);
+        move(mysaucer->row, mysaucer->col-1); /* Go to saucer's last position */
+        addstr(blank); /* Clear the saucer */
+        move(LINES-1, COLS-1); /* Park cursor */
         refresh();
         pthread_mutex_unlock(&MX);
 
