@@ -36,7 +36,8 @@ Top left corner of terminal (0 0)
 
 #define AMMO 10 /* Total number of rockets */
 #define LANES 3 /* Top lines enemy saucers can occupy */
-#define SAUCER "<--->" /* Enemy saucer shape */ // TODO remove and change to a string like launcher
+#define LAUNCHER "|" /* Launcher shape */
+#define SAUCER "<--->" /* Enemy saucer shape */
 #define ROCKET "^" /* Rocket shape */
 #define MAX_PLAYERS 1 /* Max number of players that can play */
 #define MAX_ROCKETS 30 /* Max number of rockets on screen */
@@ -68,7 +69,7 @@ struct saucer {
 pthread_mutex_t MX = PTHREAD_MUTEX_INITIALIZER; /* Mutex lock */
 
 void setup_curses();
-void setup_players(struct launcher[], char *);
+void setup_players(struct launcher[]);
 void setup_rockets(struct rocket[]);
 void setup_saucers(struct saucer[]);
 void *animate_launcher(void *);
@@ -88,13 +89,12 @@ int main(int argc, char *argv[])
         pthread_t saucer_factory_thread;
         void *animate_launcher();
         void *animate_rocket();
-        char *launcher = "|"; /* User launcher shape */
 
         /* Creates random seed based on pid */
         srand(getpid());
 
         setup_curses();
-        setup_players(launcher_props, launcher);
+        setup_players(launcher_props);
         setup_rockets(rocket_props);
         setup_saucers(saucer_props);
 
@@ -169,14 +169,14 @@ void setup_curses()
  * TODO add description for this function
  * Setup player props
  */
-void setup_players(struct launcher player_array[], char *launcher_str)
+void setup_players(struct launcher player_array[])
 {
         int i;
 
         /* For every launcher */
         for (i=0; i < MAX_PLAYERS; i++) {
             /* Set string of launcher string */
-            player_array[i].str = launcher_str;
+            player_array[i].str = LAUNCHER;
             /* Set launcher row position */
             player_array[i].row = LINES-2;
             /* Set launcher column posiition */
