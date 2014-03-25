@@ -269,42 +269,6 @@ void *animate_launcher(void *arg)
         }
 }
 
-// OLD
-                /* pthread_mutex_lock(&MX); */
-                /*     move(player->row, player->col); /\* Go to last location of launcher *\/ */
-                /*     addch(' '); /\* Replace with a space *\/ */
-                /*     //refresh(); */
-                /*     /\* Check if launcher is on one of the sides of the terminal *\/ */
-                /*     if ((player->dir == 1) && (player->col != COLS-1)) { */
-                /*         /\* Sets launcher column position to new position based on direction *\/ */
-                /*         player->col += player->dir;  */
-                /*     } */
-                /*     else if ((player->dir == -1) && (player->col != 0)) { */
-                /*         /\* Sets launcher column position to new position based on direction *\/ */
-                /*         player->col += player->dir;  */
-                /*     } */
-                /*     move(player->row, player->col); /\* Moves cursor to current launcher location *\/ */
-                /*     addstr(player->str); /\* Puts the launcher string at the new launcher location *\/ */
-                /*     addch(' '); /\* Replace with a space *\/ */
-                /*     //refresh(); */
-                /*     move(LINES-1, COLS-1); /\* Parks cursor *\/ */
-                /*     refresh(); /\* Refreshes the screen *\/ */
-                /* pthread_mutex_unlock(&MX); */
-
-                /* player->dir = 0; /\* Sets direction to 0 *\/ */
-
-
-//              pthread_mutex_lock(&MX);
-//              move(player->row, player->col); /* Go to last location of launcher */
-//              addch(' '); /* Replace with a space */
-//              player->col += player->dir; /* Sets launcher column position to new position based on direction */
-//              move(player->row, player->col); /* Moves cursor to current launcher location */
-//              addstr(player->str); /* Puts the launcher string at the new launcher location */
-//              move(LINES-1, COLS-1); /* Parks cursor */
-//              refresh(); /* Refreshes the screen */
-//              pthread_mutex_unlock(&MX);
-// player->dir = 0; /* Sets direction to 0 */
-
 /*
  * TODO add description for this function
  * Animate the rocket prop
@@ -313,25 +277,26 @@ void *animate_rocket(void *arg)
 {
         struct rocket *myrocket = arg;
 
-        /* Displays initial rocket */
+        /* Displays initial rocket so that it doesn't cover the launcher*/
+        usleep(TUNIT);
         pthread_mutex_lock(&MX);
         move(myrocket->row, myrocket->col);
         addstr(myrocket->str);
+        myrocket->row -= 1; /* Increments rocket position */
         move(LINES-1, COLS-1);
         refresh();
         pthread_mutex_unlock(&MX);
 
         /* Animates rocket upward while rocket position is not 0 */
-        while(myrocket->row) {
+        while(myrocket->row >= 0) {
             usleep(TUNIT);
-
             pthread_mutex_lock(&MX);
-            move(myrocket->row, myrocket->col);
-            addch(' ');
-            myrocket->row -= 1;
-            move(myrocket->row, myrocket->col);
-            addstr(myrocket->str);
-            move(LINES-1, COLS-1);
+            move(myrocket->row+1, myrocket->col); /* Moves to old instance of rocket */
+            addch(' '); /* Removes it */
+            move(myrocket->row, myrocket->col); /* Moves to new rocket location */
+            addstr(myrocket->str); /* Prints it */
+            myrocket->row -= 1; /* Increments rocket position */
+            move(LINES-1, COLS-1); /* Park cursor */
             refresh();
             pthread_mutex_unlock(&MX);
         }
@@ -339,7 +304,7 @@ void *animate_rocket(void *arg)
         /* Remove last visible instance of rocket */
         usleep(TUNIT);
         pthread_mutex_lock(&MX);
-        move(myrocket->row, myrocket->col);
+        move(myrocket->row+1, myrocket->col);
         addch(' ');
         move(LINES-1, COLS-1);
         refresh();
