@@ -82,7 +82,7 @@ void *control_input(void *);
 
 int main(int argc, char *argv[])
 {
-        int i;
+        int i, j;
         struct launcher launcher_props[MAX_PLAYERS]; /* Player props */
         struct rocket rocket_props[MAX_ROCKETS];
         struct saucer saucer_props[MAX_SAUCERS];
@@ -134,6 +134,27 @@ int main(int argc, char *argv[])
                 }
                 LAUNCH_FLAG = 0;
                 pthread_create(&rocket_threads[i], NULL, animate_rocket, &rocket_props[i]); // TODO error case
+            }
+            /* Iterate through all rockets */
+            for (i=0; i < MAX_ROCKETS; i++) {
+                /* If rocket is live */
+                if (rocket_props[i].live == 1) {
+                    /* Iterate through saucers */
+                    for (j=0; j < MAX_SAUCERS; j++) {
+                        /* If saucer is live */
+                        if (saucer_props[j].live == 1) {
+                            /* If rocket and saucer are on same row */
+                            if (rocket_props[i].row == saucer_props[j].row) {
+                                /* If rocket is within the saucer's position */
+                                if ((rocket_props[i].col >= saucer_props[j].col) && 
+                                    (rocket_props[i].col <= (saucer_props[j].col + 4))) {
+                                    /* Set saucer to dead */
+                                    saucer_props[j].live = 0;
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 // TODO must close threads when done
@@ -326,7 +347,7 @@ void *animate_saucer(void *arg)
          * While saucer position + length of saucer is less than the terminal width
          * Note: terminal width is from 0 to COLS; visible terminal width is from 0 to COLS-1
          */
-        while((mysaucer->col + (strlen(SAUCER) - 1)) < COLS) {
+        while(((mysaucer->col + (strlen(SAUCER) - 1)) < COLS) && mysaucer->live == 1) {
             /* Delay sets the speed of the launcher crossing the screen */
             usleep(mysaucer->delay * TUNIT);
 
