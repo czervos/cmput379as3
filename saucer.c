@@ -79,6 +79,7 @@ void *animate_rocket(void *);
 void *animate_saucer(void *);
 void *saucer_factory(void *);
 void *control_input(void *);
+void strike_check(struct rocket[], struct saucer[]);
 
 int main(int argc, char *argv[])
 {
@@ -90,7 +91,7 @@ int main(int argc, char *argv[])
         pthread_t rocket_threads[MAX_ROCKETS];
         pthread_t saucer_factory_thread;
         pthread_t control_thread;
-        void *animate_launcher();
+        void *animate_launcher(); // TODO are these needed?
         void *animate_rocket();
 
         /* Creates random seed based on pid */
@@ -135,27 +136,7 @@ int main(int argc, char *argv[])
                 LAUNCH_FLAG = 0;
                 pthread_create(&rocket_threads[i], NULL, animate_rocket, &rocket_props[i]); // TODO error case
             }
-            /* Iterate through all rockets */
-            for (i=0; i < MAX_ROCKETS; i++) {
-                /* If rocket is live */
-                if (rocket_props[i].live == 1) {
-                    /* Iterate through saucers */
-                    for (j=0; j < MAX_SAUCERS; j++) {
-                        /* If saucer is live */
-                        if (saucer_props[j].live == 1) {
-                            /* If rocket and saucer are on same row */
-                            if (rocket_props[i].row == saucer_props[j].row) {
-                                /* If rocket is within the saucer's position */
-                                if ((rocket_props[i].col >= saucer_props[j].col) && 
-                                    (rocket_props[i].col <= (saucer_props[j].col + 4))) {
-                                    /* Set saucer to dead */
-                                    saucer_props[j].live = 0;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            strike_check(rocket_props, saucer_props);
         }
 // TODO must close threads when done
         endwin();
@@ -445,4 +426,35 @@ void *control_input(void *arg)
                     LAUNCH_FLAG = 1;
         }
         pthread_exit(NULL);
+}
+
+/*
+ * TODO add description for this function
+ * Detects rocket strike on saucer
+ */
+void strike_check(struct rocket rocket_array[], struct saucer saucer_array[])
+{
+        int i, j;
+
+        /* Iterate through all rockets */
+        for (i=0; i < MAX_ROCKETS; i++) {
+            /* If rocket is live */
+            if (rocket_array[i].live == 1) {
+                /* Iterate through saucers */
+                for (j=0; j < MAX_SAUCERS; j++) {
+                    /* If saucer is live */
+                    if (saucer_array[j].live == 1) {
+                        /* If rocket and saucer are on same row */
+                        if (rocket_array[i].row == saucer_array[j].row) {
+                            /* If rocket is within the saucer's position */
+                            if ((rocket_array[i].col >= saucer_array[j].col) && 
+                                (rocket_array[i].col <= (saucer_array[j].col + 4))) {
+                                /* Set saucer to dead */
+                                saucer_array[j].live = 0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
 }
