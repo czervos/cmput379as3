@@ -110,6 +110,13 @@ int main(int argc, char *argv[])
 
         pthread_create(&saucer_factory_thread, NULL, saucer_factory, &saucer_props);
 
+/* TODO maybe have a separate thread for controls:
+ * if Q is it, it would change a global quit flag that main can detect and quit the game
+ * can pass the launcher_prop array into it
+ * and can change a global rocket fired flag that main can fire a shot
+ * this would allow main to keep checking for any hits by comparing rocket_prop array to saucer_prop array
+ */
+
         /* Game loop */
         while (1) {
             c = getch();
@@ -237,10 +244,21 @@ void *animate_launcher(void *arg)
                     player->col += player->dir; 
                 }
                 pthread_mutex_lock(&MX);
-                move(player->row, player->col-1); /* Moves cursor to left of current launcher location */
-                addch(' ');
-                addstr(player->str); /* Puts the launcher string at the new launcher location */
-                addch(' '); /* Replace with a space */
+                /* 
+                 * If launcher is at column 0, do not print a space before launcher since negative numbers are not
+                 * mapped on the terminal
+                 */
+                if (player->col == 0) {
+                    move(player->row, player->col); /* Moves cursor to left of current launcher location */
+                    addstr(player->str); /* Puts the launcher string at the new launcher location */
+                    addch(' '); /* Spaces clear any old instance of the launcher */
+                }
+                else {
+                    move(player->row, player->col-1); /* Moves cursor to left of current launcher location */
+                    addch(' '); /* Spaces clear any old instance of the launcher */
+                    addstr(player->str); /* Puts the launcher string at the new launcher location */
+                    addch(' ');
+                }
                 //refresh();
                 move(LINES-1, COLS-1); /* Parks cursor */
                 refresh(); /* Refreshes the screen */
