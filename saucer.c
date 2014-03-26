@@ -35,6 +35,7 @@ Top left corner of terminal (0 0)
 #include <unistd.h>
 
 #define AMMO 10 /* Starting number of rockets */
+#define LANES 3 /* Number of lanes for the saucers to traverse */
 #define LAUNCHER "|" /* Launcher shape */
 #define SAUCER "<--->" /* Enemy saucer shape */
 #define ROCKET "^" /* Rocket shape */
@@ -117,6 +118,7 @@ int main(int argc, char *argv[])
             }
         }
 
+        // TODO error case for thread creation
         pthread_create(&control_thread, NULL, control_input, &launcher_props);
         pthread_create(&saucer_factory_thread, NULL, saucer_factory, &saucer_props);
         pthread_create(&HUD_thread, NULL, HUD_display, NULL);
@@ -336,6 +338,7 @@ void *animate_saucer(void *arg)
 
         /* 
          * While saucer position + length of saucer is less than the terminal width
+         * and saucer is still live
          * Note: terminal width is from 0 to COLS; visible terminal width is from 0 to COLS-1
          */
         while(((mysaucer->col + (strlen(SAUCER) - 1)) < COLS) && mysaucer->live == 1) {
@@ -396,8 +399,9 @@ void *saucer_factory(void *arg)
 
             for (i=0; i < MAX_SAUCERS; i++) { // TODO what to do when all MAX_SAUCERS are on screen?
                 if (saucer_array[i].live == 0) {
-                    /* Generates random row value between 0 and 2 */
-                    saucer_array[i].row = rand()%3;
+                    /* Generates random row value between 0 and LANES-1 */
+                    /* Thus generates LANES number of lanes for the saucers to traverse */
+                    saucer_array[i].row = rand()%LANES;
                     saucer_array[i].col = 0;
                     /* Generates delay value of 1 plus random # between 0 and 14 - ie random number between 1 and 15 */
                     saucer_array[i].delay = 1 + (rand()%15);
