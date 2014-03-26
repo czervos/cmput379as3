@@ -38,6 +38,8 @@ Top left corner of terminal (0 0)
 #define LAUNCHER "|" /* Launcher shape */
 #define SAUCER "<--->" /* Enemy saucer shape */
 #define ROCKET "^" /* Rocket shape */
+#define SAUCER_SCORE 100  /* Points for killing a saucer */
+#define SAUCER_AMMO 2 /* Ammo for killing a saucer */
 #define MAX_PLAYERS 1 /* Max number of players that can play */
 #define MAX_ROCKETS 30 /* Max number of rockets on screen */
 #define MAX_SAUCERS 10 /* Max number of saucers on screen */
@@ -426,8 +428,12 @@ void *control_input(void *arg)
                     launcher_array[0].dir = -1;
             if (c == KEY_RIGHT)
                     launcher_array[0].dir = 1;
-            if (c == ' ')
+            if (c == ' ') {
+                if (P1AMMO != 0) {
+                    P1AMMO -= 1;
                     LAUNCH_FLAG = 1;
+                }
+            }
         }
         pthread_exit(NULL);
 }
@@ -455,6 +461,10 @@ void strike_check(struct rocket rocket_array[], struct saucer saucer_array[])
                                 (rocket_array[i].col <= (saucer_array[j].col + 4))) {
                                 /* Set saucer to dead */
                                 saucer_array[j].live = 0;
+                                /* Points for killing saucer */
+                                P1SCORE += SAUCER_SCORE;
+                                /* Ammo for killing saucer */
+                                P1AMMO += SAUCER_AMMO;
                                 // TODO set rocket to dead
                             }
                         }
@@ -470,8 +480,10 @@ void strike_check(struct rocket rocket_array[], struct saucer saucer_array[])
  */
 void *HUD_display()
 {
+        char *blank = "                                                         "; // TODO make this dynamic
         while(1) {
             pthread_mutex_lock(&MX);
+            mvprintw(LINES-1,0, blank);
             mvprintw(LINES-1,0,"Player1 - Score: %d - Ammo: %d", P1SCORE, P1AMMO);
             move(LINES-1, COLS-1); /* Park cursor */
             pthread_mutex_unlock(&MX);
