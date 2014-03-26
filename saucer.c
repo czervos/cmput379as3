@@ -34,8 +34,7 @@ Top left corner of terminal (0 0)
 #include <string.h>
 #include <unistd.h>
 
-#define AMMO 10 /* Total number of rockets */
-#define LANES 3 /* Top lines enemy saucers can occupy */
+#define AMMO 10 /* Starting number of rockets */
 #define LAUNCHER "|" /* Launcher shape */
 #define SAUCER "<--->" /* Enemy saucer shape */
 #define ROCKET "^" /* Rocket shape */
@@ -69,6 +68,8 @@ struct saucer {
 pthread_mutex_t MX = PTHREAD_MUTEX_INITIALIZER; /* Mutex lock */
 int QUIT_FLAG = 0; /* Inidicates whether game should be quit */
 int LAUNCH_FLAG = 0; /* Indicates whether a rocket should be launched */
+int P1AMMO = AMMO; /* Player 1's ammo count */
+int P1SCORE = 0; /* Player 1's score */
 
 void setup_curses();
 void setup_players(struct launcher[]);
@@ -80,6 +81,7 @@ void *animate_saucer(void *);
 void *saucer_factory(void *);
 void *control_input(void *);
 void strike_check(struct rocket[], struct saucer[]);
+void *HUD_display();
 
 int main(int argc, char *argv[])
 {
@@ -91,6 +93,7 @@ int main(int argc, char *argv[])
         pthread_t rocket_threads[MAX_ROCKETS];
         pthread_t saucer_factory_thread;
         pthread_t control_thread;
+        pthread_t HUD_thread;
         void *animate_launcher(); // TODO are these needed?
         void *animate_rocket();
 
@@ -114,6 +117,7 @@ int main(int argc, char *argv[])
 
         pthread_create(&control_thread, NULL, control_input, &launcher_props);
         pthread_create(&saucer_factory_thread, NULL, saucer_factory, &saucer_props);
+        pthread_create(&HUD_thread, NULL, HUD_display, NULL);
 
 /* TODO maybe have a separate thread for controls:
  * if Q is it, it would change a global quit flag that main can detect and quit the game
@@ -322,7 +326,7 @@ void *animate_rocket(void *arg)
 void *animate_saucer(void *arg)
 {
         struct saucer *mysaucer = arg;
-        char *blank = "     ";
+        char *blank = "     "; // TODO make this dynamic?
 
         /* 
          * While saucer position + length of saucer is less than the terminal width
@@ -451,10 +455,27 @@ void strike_check(struct rocket rocket_array[], struct saucer saucer_array[])
                                 (rocket_array[i].col <= (saucer_array[j].col + 4))) {
                                 /* Set saucer to dead */
                                 saucer_array[j].live = 0;
+                                // TODO set rocket to dead
                             }
                         }
                     }
                 }
             }
         }
+}
+
+/*
+ * TODO add description for this function
+ * Displays the HUD
+ */
+void *HUD_display()
+{
+        while(1) {
+            pthread_mutex_lock(&MX);
+            mvprintw(LINES-1,0,"Player1 - Score: %d - Ammo: %d", P1SCORE, P1AMMO);
+            move(LINES-1, COLS-1); /* Park cursor */
+            pthread_mutex_unlock(&MX);
+        }
+
+// TODO quit thread
 }
