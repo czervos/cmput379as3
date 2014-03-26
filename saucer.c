@@ -44,7 +44,9 @@ Top left corner of terminal (0 0)
 #define MAX_PLAYERS 1 /* Max number of players that can play */
 #define MAX_ROCKETS 30 /* Max number of rockets on screen */
 #define MAX_SAUCERS 10 /* Max number of saucers on screen */
+#define ESCAPE_NUM 10 /* Number of escapes before game is over */
 #define TUNIT 20000 /* Time unit in microseconds */
+
 
 struct launcher {
         char *str; /* Look of launcher */
@@ -73,6 +75,7 @@ int QUIT_FLAG = 0; /* Inidicates whether game should be quit */
 int LAUNCH_FLAG = 0; /* Indicates whether a rocket should be launched */
 int P1AMMO = AMMO; /* Player 1's ammo count */
 int P1SCORE = 0; /* Player 1's score */
+int ESCAPE = 0; /* Number of escaped saucers */
 
 void setup_curses();
 void setup_players(struct launcher[]);
@@ -145,6 +148,8 @@ int main(int argc, char *argv[])
                 pthread_create(&rocket_threads[i], NULL, animate_rocket, &rocket_props[i]); // TODO error case
             }
             strike_check(rocket_props, saucer_props);
+            if (ESCAPE == ESCAPE_NUM)
+                    QUIT_FLAG = 1;
         }
 // TODO must close threads when done
         endwin();
@@ -365,6 +370,10 @@ void *animate_saucer(void *arg)
             mysaucer->col += 1; /* Increment saucer position */
         }
 
+        /* Increment escape count if saucer escaped */
+        if (mysaucer->live == 1)
+                ESCAPE += 1;
+
         /* Remove saucer upon exiting screen */
         pthread_mutex_lock(&MX);
         move(mysaucer->row, mysaucer->col-1); /* Go to saucer's last position */
@@ -493,7 +502,7 @@ void *HUD_display()
             usleep(TUNIT);
             pthread_mutex_lock(&MX);
             mvprintw(LINES-1,0, blank);
-            mvprintw(LINES-1,0,"Player1 - Score: %d - Ammo: %d", P1SCORE, P1AMMO);
+            mvprintw(LINES-1,0,"Player1 - Score: %d - Ammo: %d - Escaped Saucers: %d", P1SCORE, P1AMMO, ESCAPE);
             move(LINES-1, COLS-1); /* Park cursor */
             refresh();
             pthread_mutex_unlock(&MX);
