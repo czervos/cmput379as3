@@ -135,6 +135,7 @@ int main(int argc, char *argv[])
 
         /* Game loop */
         while (!QUIT_FLAG) {
+            /* Check if user wants to launch rocket and does so */
             if (LAUNCH_FLAG == 1) {
                 for (i=0; i < MAX_ROCKETS; i++) { // TODO what to do when all MAX_ROCKETS are on screen?
                     if (rocket_props[i].live == 0) {
@@ -147,9 +148,20 @@ int main(int argc, char *argv[])
                 LAUNCH_FLAG = 0;
                 pthread_create(&rocket_threads[i], NULL, animate_rocket, &rocket_props[i]); // TODO error case
             }
+            /* Checks if any live rockets hit a saucer */
             strike_check(rocket_props, saucer_props);
+            /* Checks escape endgame condition */
             if (ESCAPE == ESCAPE_NUM)
                     QUIT_FLAG = 1;
+            /* Checks if ammo depleted and there are no live rockets for endgame condition */
+            if (P1AMMO == 0) {
+                for (i=0; i < MAX_ROCKETS; i++) {
+                    if (rocket_props[i].live == 1)
+                            break;
+                    if (i == MAX_ROCKETS-1)
+                            QUIT_FLAG = 1;
+                }
+            }
         }
 // TODO must close threads when done
         endwin();
