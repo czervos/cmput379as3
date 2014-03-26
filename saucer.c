@@ -230,8 +230,12 @@ void *animate_launcher(void *arg)
         struct launcher *player = arg; /* Points to launcher struct passed into function */
 
         /* Prints launcher at initial position */
+        pthread_mutex_lock(&MX);
+        usleep(TUNIT);
         mvprintw(player->row, player->col, player->str);
+        move(LINES-1, COLS-1); /* Parks cursor */
         refresh();
+        pthread_mutex_unlock(&MX);
 
         while(1) {
             /* Brief pause needed for curses not to output garbage when moving */
@@ -482,10 +486,12 @@ void *HUD_display()
 {
         char *blank = "                                                         "; // TODO make this dynamic
         while(1) {
+            usleep(TUNIT);
             pthread_mutex_lock(&MX);
             mvprintw(LINES-1,0, blank);
             mvprintw(LINES-1,0,"Player1 - Score: %d - Ammo: %d", P1SCORE, P1AMMO);
             move(LINES-1, COLS-1); /* Park cursor */
+            refresh();
             pthread_mutex_unlock(&MX);
         }
 
