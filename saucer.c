@@ -74,10 +74,10 @@ struct saucer {
 pthread_mutex_t MX = PTHREAD_MUTEX_INITIALIZER; /* Mutex lock */
 int QUIT_FLAG = 0; /* Inidicates whether game should be quit */
 int LAUNCH_FLAG = 0; /* Indicates whether a rocket should be launched */
-int P1AMMO = AMMO; /* Player 1's ammo count */ // TODO put in own struct
+int P1AMMO = AMMO; /* Player 1's ammo count */ // TODO put in own struct - requires changing stuff control_input function
 int P1SCORE = 0; /* Player 1's score */ // TODO put in own struct
 int ESCAPE = 0; /* Number of escaped saucers */
-int TIMER = TIME;
+int TIMER = TIME; /* Time remaining in the game */ // TODO put in own struct
 
 void setup_curses();
 void setup_players(struct launcher[]);
@@ -168,6 +168,8 @@ int main(int argc, char *argv[])
                             QUIT_FLAG = 1;
                 }
             }
+            if (TIMER == 0)
+                    QUIT_FLAG = 1;
         }
 // TODO must close threads when done
         endwin();
