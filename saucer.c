@@ -45,6 +45,7 @@ Top left corner of terminal (0 0)
 #define MAX_ROCKETS 30 /* Max number of rockets on screen */
 #define MAX_SAUCERS 10 /* Max number of saucers on screen */
 #define ESCAPE_NUM 10 /* Number of escapes before game is over */
+#define TIME 60 /* Gameplay time in seconds */
 #define TUNIT 20000 /* Time unit in microseconds */
 
 
@@ -63,19 +64,20 @@ struct rocket {
 };
 
 struct saucer {
-        char *str; /* Look of rocket */
+        char *str; /* Look of saucer */
         int row; /* Row location */
         int col; /* Column location */
         int delay; /* Delay time unit for animation */
-        int live; /* Flag indicating whether or not rocket is active */
+        int live; /* Flag indicating whether or not saucer is active */
 };
 
 pthread_mutex_t MX = PTHREAD_MUTEX_INITIALIZER; /* Mutex lock */
 int QUIT_FLAG = 0; /* Inidicates whether game should be quit */
 int LAUNCH_FLAG = 0; /* Indicates whether a rocket should be launched */
-int P1AMMO = AMMO; /* Player 1's ammo count */
-int P1SCORE = 0; /* Player 1's score */
+int P1AMMO = AMMO; /* Player 1's ammo count */ // TODO put in own struct
+int P1SCORE = 0; /* Player 1's score */ // TODO put in own struct
 int ESCAPE = 0; /* Number of escaped saucers */
+int TIMER = TIME;
 
 void setup_curses();
 void setup_players(struct launcher[]);
@@ -88,6 +90,7 @@ void *saucer_factory(void *);
 void *control_input(void *);
 void strike_check(struct rocket[], struct saucer[]);
 void *HUD_display();
+void *countdown_timer();
 
 int main(int argc, char *argv[])
 {
@@ -100,6 +103,7 @@ int main(int argc, char *argv[])
         pthread_t saucer_factory_thread;
         pthread_t control_thread;
         pthread_t HUD_thread;
+        pthread_t timer_thread;
         void *animate_launcher(); // TODO are these needed?
         void *animate_rocket();
 
@@ -125,6 +129,8 @@ int main(int argc, char *argv[])
         pthread_create(&control_thread, NULL, control_input, &launcher_props);
         pthread_create(&saucer_factory_thread, NULL, saucer_factory, &saucer_props);
         pthread_create(&HUD_thread, NULL, HUD_display, NULL);
+        pthread_create(&timer_thread, NULL, countdown_timer, NULL);
+
 
 /* TODO maybe have a separate thread for controls:
  * if Q is it, it would change a global quit flag that main can detect and quit the game
@@ -509,16 +515,30 @@ void strike_check(struct rocket rocket_array[], struct saucer saucer_array[])
  */
 void *HUD_display()
 {
-        char *blank = "                                                         "; // TODO make this dynamic
+        char *blank = "                                                                        "; // TODO make this dynamic
         while(1) {
             usleep(TUNIT);
             pthread_mutex_lock(&MX);
             mvprintw(LINES-1,0, blank);
-            mvprintw(LINES-1,0,"Player1 - Score: %d - Ammo: %d - Escaped Saucers: %d", P1SCORE, P1AMMO, ESCAPE);
+            mvprintw(LINES-1,0,"Player1 - Score: %d - Ammo: %d - Escaped Saucers: %d - Time Left: %d", P1SCORE, P1AMMO, ESCAPE, TIMER);
             move(LINES-1, COLS-1); /* Park cursor */
             refresh();
             pthread_mutex_unlock(&MX);
         }
 
+// TODO quit thread
+}
+
+/*
+ * TODO add description for this function
+ * Countdown timer
+ */
+
+void *countdown_timer()
+{
+        while (TIMER > 0) {
+            sleep(1);
+            TIMER -= 1;
+        }
 // TODO quit thread
 }
