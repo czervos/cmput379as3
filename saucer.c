@@ -39,6 +39,7 @@ Top left corner of terminal (0 0)
 #define LAUNCHER "|" /* Launcher shape */
 #define SAUCER "<--->" /* Enemy saucer shape */
 #define ROCKET "^" /* Rocket shape */
+#define EXPLOSION "~%@%~" /* Explosion shape */
 #define SAUCER_SCORE 100  /* Points for killing a saucer */
 #define SAUCER_AMMO 2 /* Ammo for killing a saucer */
 #define MAX_PLAYERS 1 /* Max number of players that can play */
@@ -394,7 +395,18 @@ void *animate_saucer(void *arg)
         if (mysaucer->live == 1)
                 ESCAPE += 1;
 
-        /* Remove saucer upon exiting screen */
+        /* Display explosion if saucer hit by rocket */
+        else {
+            pthread_mutex_lock(&MX);
+            move(mysaucer->row, mysaucer->col-1); /* Go to saucer's last position */
+            addstr(EXPLOSION); /* Display explosion */
+            move(LINES-1, COLS-1); /* Park cursor */
+            refresh();
+            pthread_mutex_unlock(&MX);
+        }
+
+        /* Remove saucer*/
+        usleep(TUNIT * 5);
         pthread_mutex_lock(&MX);
         move(mysaucer->row, mysaucer->col-1); /* Go to saucer's last position */
         addstr(blank); /* Clear the saucer */
