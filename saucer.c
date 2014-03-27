@@ -109,6 +109,7 @@ int main(int argc, char *argv[])
         pthread_t timer_thread;
         void *animate_launcher(); // TODO are these needed?
         void *animate_rocket();
+        char game_over[] = "Game Over!";
 
         /* Creates random seed based on pid */
         srand(getpid());
@@ -169,10 +170,15 @@ int main(int argc, char *argv[])
                     QUIT_FLAG = 1;
         }
 
-        if (TIMER == 0) {
-            sleep(1);
-            victory_screen();
-        }
+        mvprintw(LINES/2, (COLS-strlen(game_over))/2, game_over);
+        sleep(5);
+
+        /* Set all rockets to 0 for cleanup */
+        for (i=0; i < MAX_ROCKETS; i++)
+                rocket_props[i].live = 0;
+
+        if (TIMER == 0)
+                victory_screen();
 // TODO must close threads when done
         endwin();
         return 0;
@@ -453,6 +459,10 @@ void *saucer_factory(void *arg)
             }
             pthread_create(&saucer_threads[i], NULL, animate_saucer, &saucer_array[i]); // TODO error case
         }
+        /* Set all saucers to 0 for cleanup */
+        for (i=0; i < MAX_SAUCERS; i++)
+                saucer_array[i].live = 0;
+
         pthread_exit(NULL);
 }
 
@@ -584,8 +594,8 @@ void victory_screen()
 {
         char victory1[] = "VICTORY!!!";
         char victory2[] = "You have successfully fended off the saucer attack!";
-        char victory3[] = "Press any key to end the game";
-        char c;
+        char victory3[] = "Press SHIFT-Q to end the game";
+        int c;
 
         clear();
         mvprintw(LINES/2, (COLS-strlen(victory1))/2, victory1);
@@ -593,5 +603,9 @@ void victory_screen()
         mvprintw(LINES/2+3, (COLS-strlen(victory3))/2, victory3);
         move(LINES-1, COLS-1); /* Park cursor */
 
-        c = getch();
+        while (1) {
+            c = getch();
+            if (c == 'Q')
+                    break;
+        }
 }
