@@ -93,6 +93,7 @@ void strike_check(struct rocket[], struct saucer[]);
 void *HUD_display();
 void *countdown_timer();
 void splash_screen();
+void victory_screen();
 
 int main(int argc, char *argv[])
 {
@@ -166,6 +167,11 @@ int main(int argc, char *argv[])
             }
             if (TIMER == 0)
                     QUIT_FLAG = 1;
+        }
+
+        if (TIMER == 0) {
+            sleep(1);
+            victory_screen();
         }
 // TODO must close threads when done
         endwin();
@@ -260,7 +266,7 @@ void *animate_launcher(void *arg)
         refresh();
         pthread_mutex_unlock(&MX);
 
-        while(1) {
+        while(!QUIT_FLAG) {
             /* Brief pause needed for curses not to output garbage when moving */
             usleep(TUNIT);
             /* Waits for input from user to change the direction of launcher */
@@ -297,6 +303,7 @@ void *animate_launcher(void *arg)
                 player->dir = 0; /* Sets direction to 0 */
             }
         }
+        pthread_exit(NULL);
 }
 
 /*
@@ -317,8 +324,8 @@ void *animate_rocket(void *arg)
         refresh();
         pthread_mutex_unlock(&MX);
 
-        /* Animates rocket upward while rocket position is not 0 */
-        while(myrocket->row >= 0) {
+        /* Animates rocket upward while rocket position is not 0 and rocket is live*/
+        while((myrocket->row >= 0) && myrocket->live == 1) {
             usleep(TUNIT);
             pthread_mutex_lock(&MX);
             move(myrocket->row+1, myrocket->col); /* Moves to old instance of rocket */
@@ -428,7 +435,7 @@ void *saucer_factory(void *arg)
         int i;
 
         /* Factory loop */
-        while (1) {
+        while (!QUIT_FLAG) {
             /* Sleeps for random period between 1 and 5 seconds */
             sleep(1+ rand()%5);
 
@@ -446,7 +453,7 @@ void *saucer_factory(void *arg)
             }
             pthread_create(&saucer_threads[i], NULL, animate_saucer, &saucer_array[i]); // TODO error case
         }
-        // TODO exit the thread
+        pthread_exit(NULL);
 }
 
 /*
@@ -459,7 +466,7 @@ void *control_input(void *arg)
         int c;
 
         /* Input loop */
-        while (1) {
+        while (!QUIT_FLAG) {
             c = getch();
             /* Quit the game */
             // TODO switch to switch
@@ -504,6 +511,8 @@ void strike_check(struct rocket rocket_array[], struct saucer saucer_array[])
                                 (rocket_array[i].col <= (saucer_array[j].col + 4))) {
                                 /* Set saucer to dead */
                                 saucer_array[j].live = 0;
+                                /* Set rocket to dead */
+                                rocket_array[i].live = 0;
                                 /* Points for killing saucer */
                                 P1SCORE += SAUCER_SCORE;
                                 /* Ammo for killing saucer */
@@ -524,7 +533,7 @@ void strike_check(struct rocket rocket_array[], struct saucer saucer_array[])
 void *HUD_display()
 {
         char *blank = "                                                                        "; // TODO make this dynamic
-        while(1) {
+        while(!QUIT_FLAG) {
             usleep(TUNIT);
             pthread_mutex_lock(&MX);
             mvprintw(LINES-1,0, blank);
@@ -533,8 +542,7 @@ void *HUD_display()
             refresh();
             pthread_mutex_unlock(&MX);
         }
-
-// TODO quit thread
+        pthread_exit(NULL);
 }
 
 /*
@@ -543,11 +551,11 @@ void *HUD_display()
  */
 void *countdown_timer()
 {
-        while (TIMER > 0) {
+        while ((TIMER > 0) && !QUIT_FLAG) {
             sleep(1);
             TIMER -= 1;
         }
-// TODO quit thread
+        pthread_exit(NULL);
 }
 
 /*
@@ -556,7 +564,7 @@ void *countdown_timer()
  */
 void splash_screen()
 {
-        char title[] = "Saucer Attack";
+        char title[] = "SAUCER ATTACK";
         char anykey[] = "Press any key to start playing";
         char c;
 
@@ -566,4 +574,24 @@ void splash_screen()
 
         c = getch();
         clear();
+}
+
+/*
+ * TODO add description for this function
+ * Victory screen
+ */
+void victory_screen()
+{
+        char victory1[] = "VICTORY!!!";
+        char victory2[] = "You have successfully fended off the saucer attack!";
+        char victory3[] = "Press any key to end the game";
+        char c;
+
+        clear();
+        mvprintw(LINES/2, (COLS-strlen(victory1))/2, victory1);
+        mvprintw(LINES/2+1, (COLS-strlen(victory2))/2, victory2);
+        mvprintw(LINES/2+3, (COLS-strlen(victory3))/2, victory3);
+        move(LINES-1, COLS-1); /* Park cursor */
+
+        c = getch();
 }
