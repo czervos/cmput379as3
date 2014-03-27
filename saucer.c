@@ -92,6 +92,7 @@ void *control_input(void *);
 void strike_check(struct rocket[], struct saucer[]);
 void *HUD_display();
 void *countdown_timer();
+void splash_screen();
 
 int main(int argc, char *argv[])
 {
@@ -116,6 +117,8 @@ int main(int argc, char *argv[])
         setup_rockets(rocket_props);
         setup_saucers(saucer_props);
 
+        splash_screen();
+
         /* Set up every needed player thread */
         for (i=0; i < MAX_PLAYERS; i++) {
             /* Create thread to execute animate_launcher function, else error */
@@ -131,14 +134,6 @@ int main(int argc, char *argv[])
         pthread_create(&saucer_factory_thread, NULL, saucer_factory, &saucer_props);
         pthread_create(&HUD_thread, NULL, HUD_display, NULL);
         pthread_create(&timer_thread, NULL, countdown_timer, NULL);
-
-
-/* TODO maybe have a separate thread for controls:
- * if Q is it, it would change a global quit flag that main can detect and quit the game
- * can pass the launcher_prop array into it
- * and can change a global rocket fired flag that main can fire a shot
- * this would allow main to keep checking for any hits by comparing rocket_prop array to saucer_prop array
- */
 
         /* Game loop */
         while (!QUIT_FLAG) {
@@ -295,7 +290,6 @@ void *animate_launcher(void *arg)
                     addstr(player->str); /* Puts the launcher string at the new launcher location */
                     addch(' ');
                 }
-                //refresh();
                 move(LINES-1, COLS-1); /* Parks cursor */
                 refresh(); /* Refreshes the screen */
                 pthread_mutex_unlock(&MX);
@@ -547,7 +541,6 @@ void *HUD_display()
  * TODO add description for this function
  * Countdown timer
  */
-
 void *countdown_timer()
 {
         while (TIMER > 0) {
@@ -555,4 +548,22 @@ void *countdown_timer()
             TIMER -= 1;
         }
 // TODO quit thread
+}
+
+/*
+ * TODO add description for this function
+ * Splash screen
+ */
+void splash_screen()
+{
+        char title[] = "Saucer Attack";
+        char anykey[] = "Press any key to start playing";
+        char c;
+
+        mvprintw(LINES/2, (COLS-strlen(title))/2, title);
+        mvprintw(LINES/2+1, (COLS-strlen(anykey))/2, anykey);
+        move(LINES-1, COLS-1); /* Park cursor */
+
+        c = getch();
+        clear();
 }
