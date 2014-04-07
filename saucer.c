@@ -94,6 +94,10 @@ void *HUD_display();
 void *countdown_timer();
 void splash_screen();
 void victory_screen();
+void escape_fail_screen();
+void no_ammo_fail_screen();
+
+
 
 int main(int argc, char *argv[])
 {
@@ -179,6 +183,10 @@ int main(int argc, char *argv[])
 
         if (TIMER == 0)
                 victory_screen();
+        else if (ESCAPE == ESCAPE_NUM)
+                escape_fail_screen();
+        else if (P1AMMO == 0)
+                no_ammo_fail_screen();
 // TODO must close threads when done
         endwin();
         return 0;
@@ -601,6 +609,54 @@ void victory_screen()
         mvprintw(LINES/2, (COLS-strlen(victory1))/2, victory1);
         mvprintw(LINES/2+1, (COLS-strlen(victory2))/2, victory2);
         mvprintw(LINES/2+3, (COLS-strlen(victory3))/2, victory3);
+        move(LINES-1, COLS-1); /* Park cursor */
+
+        while (1) {
+            c = getch();
+            if (c == 'Q')
+                    break;
+        }
+}
+
+/*
+ * TODO add description for this function
+ * Escape fail screen
+ */
+void escape_fail_screen()
+{
+        char fail1[] = "FAILURE!!!";
+        char fail2[] = "You let too many saucers invade.";
+        char fail3[] = "Press SHIFT-Q to end the game";
+        int c;
+
+        clear();
+        mvprintw(LINES/2, (COLS-strlen(fail1))/2, fail1);
+        mvprintw(LINES/2+1, (COLS-strlen(fail2))/2, fail2);
+        mvprintw(LINES/2+3, (COLS-strlen(fail3))/2, fail3);
+        move(LINES-1, COLS-1); /* Park cursor */
+
+        while (1) {
+            c = getch();
+            if (c == 'Q')
+                    break;
+        }
+}
+
+/*
+ * TODO add description for this function
+ * No ammo fail screen
+ */
+void no_ammo_fail_screen()
+{
+        char fail1[] = "FAILURE!!!";
+        char fail2[] = "You ran out of ammo and can no longer defend against the saucer invasion.";
+        char fail3[] = "Press SHIFT-Q to end the game";
+        int c;
+
+        clear();
+        mvprintw(LINES/2, (COLS-strlen(fail1))/2, fail1);
+        mvprintw(LINES/2+1, (COLS-strlen(fail2))/2, fail2);
+        mvprintw(LINES/2+3, (COLS-strlen(fail3))/2, fail3);
         move(LINES-1, COLS-1); /* Park cursor */
 
         while (1) {
