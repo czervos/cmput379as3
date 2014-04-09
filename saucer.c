@@ -3,58 +3,6 @@
  * Costa Zervos 
  */
 
-/*
-TODO
-
-MAIN THREAD:
-Main thread will keep track of user input
-
-PROP THREADS:
-Launcher threads - max 2?
-Rocket threads - max 25?
-Saucer threads - max 10?
-
-These threads will animate the props and make Rockets and Saucers disappear if they hit the end of the screen
-
-in strike_check
-
-	when a strike is successfully detected:
-		1. on a random chance, iterate through
-		   the ammo_drop_array and look for the first
-		   live=0 ammo drop
-		2. set that ammo drop to the coordinates of where the strike
-		   happend, set it to live=1, and set it to new=1
-		3. in some other method that is continually running a for loop
- 		   that checks to see if any of the rockets are live=1 and new=1
-			a. if it finds one, set that new=0 and create an animate
-			   ammo_drop thread for it.
-                4. have another method continually running called 
-                   ammo_collection check which will check to see if its coordinates
-		   match the coordinates of the launcher: if it does then 
-		   it is a sucessful collection and the user's ammo count should
-		   go up.
-		5. animate ammo drop will also check to see if the drop passed
-	           the launcher. if it has, set the ammo_drop.live = 0 and kill
-		   that animate thread.
-		6. Out of ammo fail condition needs to make sure no ammo drops
-		   are in the proccess of falling instead of checking to see if
-		   any rockets are flying.
-		7. Also remove rocket strike ammo increment.
-
-Bottom right corner of terminal (LINES-1 COLS-1)
-Top left corner of terminal (0 0)
-
-0x20 space character - memset to dynamically make blank
-
-BUG FOR THINGS STICKING AROUND:
-The issue is that i create a new thread when something is considered dead. So during the
-animation function for say a saucer, it detects its dead and starts exiting, such as priting the explosion
-and then clearing it out. But during this time, the thread can potentially get cancelled by having a new
-thread created in its place, resulting in a saucer or explosion staying behind.
-
-*/
-
-
 #include <stdio.h>
 #include <curses.h>
 #include <pthread.h>
@@ -116,11 +64,11 @@ pthread_mutex_t MX = PTHREAD_MUTEX_INITIALIZER; /* Mutex lock */
 int QUIT_FLAG = 0; /* Inidicates whether game should be quit */
 int LAUNCH_FLAG = 0; /* Indicates whether a rocket should be launched */
 int AMMO_FLAG = 0; /* Indicates whether ammo should be dropped */
-int P1AMMO = AMMO; /* Player 1's ammo count */ // TODO put in own struct - requires changing stuff control_input function
-int P1SCORE = 0; /* Player 1's score */ // TODO put in own struct
+int P1AMMO = AMMO; /* Player 1's ammo count */
+int P1SCORE = 0; /* Player 1's score */
 int ESCAPE = 0; /* Number of escaped saucers */
-int TIMER = TIME; /* Time remaining in the game */ // TODO put in own struct
-int LAUNCHER_COL = 0;
+int TIMER = TIME; /* Time remaining in the game */
+int LAUNCHER_COL = 0; /* Column position of launcher */
 
 void setup_curses();
 void setup_players(struct launcher[]);
@@ -150,7 +98,7 @@ void no_ammo_fail_screen();
 int main(int argc, char *argv[])
 {
         int i, j;
-        struct launcher launcher_props[MAX_PLAYERS]; /* Player props */
+        struct launcher launcher_props[MAX_PLAYERS];
         struct rocket rocket_props[MAX_ROCKETS];
         struct saucer saucer_props[MAX_SAUCERS];
         struct ammo_drop ammo_drop_props[MAX_AMMO_DROPS];
@@ -162,7 +110,6 @@ int main(int argc, char *argv[])
         pthread_t control_thread;
         pthread_t HUD_thread;
         pthread_t timer_thread;
-        void *animate_launcher(); // TODO are these needed?
         char game_over[] = "Game Over!";
 
         /* Creates random seed based on pid */
@@ -177,7 +124,7 @@ int main(int argc, char *argv[])
 
         splash_screen();
 
-        /* Set up every needed player thread */
+        /* Set up every needed thread */
         for (i=0; i < MAX_PLAYERS; i++) {
             /* Create thread to execute animate_launcher function, else error */
             if (pthread_create(&launcher_threads[i], NULL, animate_launcher, &launcher_props[i])) {
@@ -187,13 +134,41 @@ int main(int argc, char *argv[])
             }
         }
 
-        // TODO error case for thread creation
-        pthread_create(&control_thread, NULL, control_input, &launcher_props);
-        pthread_create(&saucer_factory_thread, NULL, saucer_factory, &saucer_props);
-        pthread_create(&HUD_thread, NULL, HUD_display, NULL);
-        pthread_create(&timer_thread, NULL, countdown_timer, NULL);
-        pthread_create(&ammo_drop_factory_thread, NULL, ammo_drop_factory, &ammo_drop_props);
-        pthread_create(&rocket_factory_thread, NULL, rocket_factory, &rocket_props);
+        if (pthread_create(&control_thread, NULL, control_input, &launcher_props)) {
+            fprintf(stderr, "Error creating thread\n");
+            endwin();
+            exit(0);
+        }
+
+        if (pthread_create(&saucer_factory_thread, NULL, saucer_factory, &saucer_props)) {
+            fprintf(stderr, "Error creating thread\n");
+            endwin();
+            exit(0);
+        }
+
+        if (pthread_create(&HUD_thread, NULL, HUD_display, NULL)) {
+            fprintf(stderr, "Error creating thread\n");
+            endwin();
+            exit(0);
+        }
+
+        if (pthread_create(&timer_thread, NULL, countdown_timer, NULL)) {
+            fprintf(stderr, "Error creating thread\n");
+            endwin();
+            exit(0);
+        }
+
+        if (pthread_create(&ammo_drop_factory_thread, NULL, ammo_drop_factory, &ammo_drop_props)) {
+            fprintf(stderr, "Error creating thread\n");
+            endwin();
+            exit(0);
+        }
+        
+        if (pthread_create(&rocket_factory_thread, NULL, rocket_factory, &rocket_props)) {
+            fprintf(stderr, "Error creating thread\n");
+            endwin();
+            exit(0);
+        }
 
         /* Game loop */
         while (!QUIT_FLAG) {
@@ -239,13 +214,12 @@ int main(int argc, char *argv[])
                 escape_fail_screen();
         else if (P1AMMO == 0)
                 no_ammo_fail_screen();
-// TODO must close threads when done -- I think at this point most threads close themselves - double check
+
         endwin();
         return 0;
 }
 
 /*
- * TODO add description for this function
  * Sets up curses 
  */
 void setup_curses()
@@ -265,7 +239,6 @@ void setup_curses()
 }
 
 /*
- * TODO add description for this function
  * Setup player props
  */
 void setup_players(struct launcher player_array[])
@@ -287,7 +260,6 @@ void setup_players(struct launcher player_array[])
 }
 
 /*
- * TODO add description for this function
  * Setup rocket props
  */
 void setup_rockets(struct rocket rocket_array[])
@@ -302,7 +274,6 @@ void setup_rockets(struct rocket rocket_array[])
 }
 
 /*
- * TODO add description for this function
  * Setup saucer props
  */
 void setup_saucers(struct saucer saucer_array[])
@@ -319,7 +290,6 @@ void setup_saucers(struct saucer saucer_array[])
 }
 
 /*
- * TODO add description for this function
  * Setup ammo drops
  */
 void setup_ammo_drops(struct ammo_drop ammo_drop_array[])
@@ -336,7 +306,6 @@ void setup_ammo_drops(struct ammo_drop ammo_drop_array[])
 }
 
 /*
- * TODO add description for this function
  * Animate the player's prop
  */
 void *animate_launcher(void *arg)
@@ -395,7 +364,6 @@ void *animate_launcher(void *arg)
 }
 
 /*
- * TODO add description for this function
  * Animate the rocket prop
  */
 void *animate_rocket(void *arg)
@@ -439,17 +407,16 @@ void *animate_rocket(void *arg)
         myrocket->live = 0;
         myrocket->row = 0;
         myrocket->col = 0;
-        pthread_exit(NULL); // TODO difference between this and pthread_cancel in terms of threads array?
+        pthread_exit(NULL);
 }
 
 /*
- * TODO add description for this function
  * Animate the saucer prop
  */
 void *animate_saucer(void *arg)
 {
         struct saucer *mysaucer = arg;
-        char *blank = "     "; // TODO make this dynamic?
+        char *blank = "     ";
 
         /* 
          * While saucer position + length of saucer is less than the terminal width
@@ -495,7 +462,7 @@ void *animate_saucer(void *arg)
         }
 
         /* Remove saucer*/
-        usleep(TUNIT * 5); // TODO why is this *5? To show explosion
+        usleep(TUNIT * 5);
         pthread_mutex_lock(&MX);
         move(mysaucer->row, mysaucer->col-1); /* Go to saucer's last position */
         addstr(blank); /* Clear the saucer */
@@ -513,7 +480,6 @@ void *animate_saucer(void *arg)
 }
 
 /*
- * TODO add description for this function
  * Animate the ammo drops
  */
 void *animate_ammo_drops(void *arg)
@@ -558,55 +524,10 @@ void *animate_ammo_drops(void *arg)
         myammo->row = 0;
         myammo->col = 0;
         myammo->thread = 0;
-        pthread_exit(NULL); // TODO difference between this and pthread_cancel in terms of threads array?
+        pthread_exit(NULL);
 }
-/* TODO REMOVE BACKUP */
-/* void *animate_ammo_drops(void *arg) */
-/* { */
-/*         struct ammo_drop *myammo = arg; */
-
-/*         /\* Displays initial ammo drop *\/ */
-/*         usleep(TUNIT); */
-/*         pthread_mutex_lock(&MX); */
-/*         move(myammo->row, myammo->col); */
-/*         addstr(myammo->str); */
-/*         myammo->row += 1; /\* Decrements ammo drop position *\/ */
-/*         move(LINES-1, COLS-1); */
-/*         refresh(); */
-/*         pthread_mutex_unlock(&MX); */
-
-/*         /\* Animates rocket upward while rocket position is not 0 and rocket is live*\/ */
-/*         while((myammo->row <= LINES-1) && myammo->live == 1) { */
-/*             usleep(TUNIT * 10); /\* Speed at which the ammo drop will fall *\/ */
-/*             pthread_mutex_lock(&MX); */
-/*             move(myammo->row-1, myammo->col); /\* Moves to old instance of ammo drop *\/ */
-/*             addch(' '); /\* Removes it *\/ */
-/*             move(myammo->row, myammo->col); /\* Moves to new ammo drop location *\/ */
-/*             addstr(myammo->str); /\* Prints it *\/ */
-/*             myammo->row += 1; /\* Increments ammo drop position *\/ */
-/*             move(LINES-1, COLS-1); /\* Park cursor *\/ */
-/*             refresh(); */
-/*             pthread_mutex_unlock(&MX); */
-/*         } */
-
-/*         /\* Remove last visible instance of rocket *\/ */
-/*         usleep(TUNIT); */
-/*         pthread_mutex_lock(&MX); */
-/*         move(myammo->row-1, myammo->col); */
-/*         addch(' '); */
-/*         move(LINES-1, COLS-1); */
-/*         refresh(); */
-/*         pthread_mutex_unlock(&MX); */
-
-/*         /\* Cleanup before exiting thread *\/ */
-/*         myammo->live = 0; */
-/*         myammo->row = 0; */
-/*         myammo->col = 0; */
-/*         pthread_exit(NULL); // TODO difference between this and pthread_cancel in terms of threads array? */
-/* } */
 
 /*
- * TODO add description for this function
  * Creates saucers
  */
 void *saucer_factory(void *arg)
@@ -621,7 +542,7 @@ void *saucer_factory(void *arg)
             /* Sleeps for random period between 1 and 5 seconds */
             sleep(1+ rand()%5);
 
-            for (i=0; i < MAX_SAUCERS; i++) { // TODO what to do when all MAX_SAUCERS are on screen?
+            for (i=0; i < MAX_SAUCERS; i++) {
                 if (saucer_array[i].live == 0 && saucer_array[i].thread == 0) {
                     /* Generates random row value between 0 and LANES-1 */
                     /* Thus generates LANES number of lanes for the saucers to traverse */
@@ -634,7 +555,11 @@ void *saucer_factory(void *arg)
                     break;
                 }
             }
-            pthread_create(&saucer_threads[i], NULL, animate_saucer, &saucer_array[i]); // TODO error case
+            if (pthread_create(&saucer_threads[i], NULL, animate_saucer, &saucer_array[i])) {
+                fprintf(stderr, "Error creating thread\n");
+                endwin();
+                exit(0);
+            } 
         }
         /* Set all saucers to 0 for cleanup */
         for (i=0; i < MAX_SAUCERS; i++)
@@ -644,7 +569,6 @@ void *saucer_factory(void *arg)
 }
 
 /*
- * TODO add description for this function
  * Creates ammo drops when needed
  */
 void *ammo_drop_factory(void *arg)
@@ -659,9 +583,12 @@ void *ammo_drop_factory(void *arg)
             if (AMMO_FLAG == 1) {
                 for (i = 0; i < MAX_AMMO_DROPS; i++) {
                     if (ammo_drop_array[i].live == 1 && ammo_drop_array[i].thread == 0) {
-                        // ammo_drop_array[i].new == 0; // TODO no longer needed?
                         ammo_drop_array[i].thread = 1;
-                        pthread_create(&ammo_drop_threads[i], NULL, animate_ammo_drops, &ammo_drop_array[i]);
+                        if (pthread_create(&ammo_drop_threads[i], NULL, animate_ammo_drops, &ammo_drop_array[i])) {
+                            fprintf(stderr, "Error creating thread\n");
+                            endwin();
+                            exit(0);
+                        }
                         break;
                     }
                 }
@@ -678,7 +605,6 @@ void *ammo_drop_factory(void *arg)
 }
 
 /*
- * TODO add description for this function
  * Detects a launch and fires the rocket
  */
 void *rocket_factory(void *arg) {
@@ -690,7 +616,7 @@ void *rocket_factory(void *arg) {
         while (!QUIT_FLAG) {
             /* Check if user wants to launch rocket and does so */
             if (LAUNCH_FLAG == 1) {
-                for (i=0; i < MAX_ROCKETS; i++) { // TODO what to do when all MAX_ROCKETS are on screen?
+                for (i=0; i < MAX_ROCKETS; i++) {
                     if (rocket_array[i].live == 0) {
                         rocket_array[i].row = (LINES-2) - 1;
                         rocket_array[i].col = LAUNCHER_COL;
@@ -699,7 +625,11 @@ void *rocket_factory(void *arg) {
                     }
                 }
                 LAUNCH_FLAG = 0;
-                pthread_create(&rocket_threads[i], NULL, animate_rocket, &rocket_array[i]); // TODO error case
+                if (pthread_create(&rocket_threads[i], NULL, animate_rocket, &rocket_array[i])) {
+                    fprintf(stderr, "Error creating thread\n");
+                    endwin();
+                    exit(0);
+                }
             }
         }
         /* Sets all rockets to 0 for cleanup */
@@ -710,7 +640,6 @@ void *rocket_factory(void *arg) {
 }
 
 /*
- * TODO add description for this function
  * Detects control input
  */
 void *control_input(void *arg)
@@ -722,7 +651,6 @@ void *control_input(void *arg)
         while (!QUIT_FLAG) {
             c = getch();
             /* Quit the game */
-            // TODO switch to switch
             if (c == 'Q') {
                 QUIT_FLAG = 1;
                 break;
@@ -742,7 +670,6 @@ void *control_input(void *arg)
 }
 
 /*
- * TODO add description for this function
  * Detects rocket strike on saucer
  */
 void strike_check(struct rocket rocket_array[], struct saucer saucer_array[], struct ammo_drop ammo_drop_array[])
@@ -763,13 +690,13 @@ void strike_check(struct rocket rocket_array[], struct saucer saucer_array[], st
                             if ((rocket_array[i].col >= saucer_array[j].col) && 
                                 (rocket_array[i].col <= (saucer_array[j].col + 4))) {
 
-                                /* 1 in 3 chance to spawn an ammo drop */
-                                if ((1 + rand()%2) == 1) { // TODO set back to 4
+                                /* 1 in 2 chance to spawn an ammo drop */
+                                if ((1 + rand()%2) == 1) {
                                     for (k = 0; k < MAX_AMMO_DROPS; k++) {
                                         if (ammo_drop_array[k].live == 0) {
                                             ammo_drop_array[k].live = 1;
                                             ammo_drop_array[k].new = 1;
-                                            ammo_drop_array[k].row = rocket_array[i].row + 1; // TODO use +1 here?
+                                            ammo_drop_array[k].row = rocket_array[i].row + 1;
                                             ammo_drop_array[k].col = rocket_array[i].col;
                                             AMMO_FLAG = 1;
                                             break;
@@ -783,10 +710,6 @@ void strike_check(struct rocket rocket_array[], struct saucer saucer_array[], st
                                 rocket_array[i].live = 0;
                                 /* Points for killing saucer */
                                 P1SCORE += SAUCER_SCORE;
-                                /* Ammo for killing saucer */
-                                // TODO remove
-                                //P1AMMO += SAUCER_AMMO;
-
                             }
                         }
                     }
@@ -796,7 +719,6 @@ void strike_check(struct rocket rocket_array[], struct saucer saucer_array[], st
 }
 
 /*
- * TODO add description for this function
  * Detects ammo collection
  */
 void ammo_collection_check(struct ammo_drop ammo_drop_array[], struct launcher launcher)
@@ -818,12 +740,11 @@ void ammo_collection_check(struct ammo_drop ammo_drop_array[], struct launcher l
 }
 
 /*
- * TODO add description for this function
- * Displays the HUD
+ * Displays and updates the HUD
  */
 void *HUD_display()
 {
-        char *blank = "                                                                        "; // TODO make this dynamic
+        char *blank = "                                                                        ";
         while(!QUIT_FLAG) {
             usleep(TUNIT);
             pthread_mutex_lock(&MX);
@@ -837,7 +758,6 @@ void *HUD_display()
 }
 
 /*
- * TODO add description for this function
  * Countdown timer
  */
 void *countdown_timer()
@@ -850,7 +770,6 @@ void *countdown_timer()
 }
 
 /*
- * TODO add description for this function
  * Splash screen
  */
 void splash_screen()
@@ -876,7 +795,6 @@ void splash_screen()
 }
 
 /*
- * TODO add description for this function
  * Instruction screen
  */
 void instruction_screen()
@@ -918,7 +836,6 @@ void instruction_screen()
 }
 
 /*
- * TODO add description for this function
  * Victory screen
  */
 void victory_screen()
@@ -942,7 +859,6 @@ void victory_screen()
 }
 
 /*
- * TODO add description for this function
  * Escape fail screen
  */
 void escape_fail_screen()
@@ -966,7 +882,6 @@ void escape_fail_screen()
 }
 
 /*
- * TODO add description for this function
  * No ammo fail screen
  */
 void no_ammo_fail_screen()
