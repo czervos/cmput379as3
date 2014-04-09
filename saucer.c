@@ -627,8 +627,8 @@ void *saucer_factory(void *arg)
                     /* Thus generates LANES number of lanes for the saucers to traverse */
                     saucer_array[i].row = rand()%LANES;
                     saucer_array[i].col = 0;
-                    /* Generates delay value of 1 plus random # between 0 and 14 - ie random number between 1 and 15 */
-                    saucer_array[i].delay = 1 + (rand()%15);
+                    /* Generates delay value of 3 + random # between 0 and 12 - ie delay is random number between 3 and 15 */
+                    saucer_array[i].delay = 3 + (rand()%13);
                     saucer_array[i].live = 1;
                     saucer_array[i].thread = 1;
                     break;
@@ -764,7 +764,7 @@ void strike_check(struct rocket rocket_array[], struct saucer saucer_array[], st
                                 (rocket_array[i].col <= (saucer_array[j].col + 4))) {
 
                                 /* 1 in 3 chance to spawn an ammo drop */
-                                if ((1 + rand()%1) == 1) { // TODO set back to 4
+                                if ((1 + rand()%2) == 1) { // TODO set back to 4
                                     for (k = 0; k < MAX_AMMO_DROPS; k++) {
                                         if (ammo_drop_array[k].live == 0) {
                                             ammo_drop_array[k].live = 1;
