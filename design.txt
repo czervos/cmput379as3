@@ -93,7 +93,7 @@ The following are the core functions of the game:
 
 	The animate_launcher() function displays the initial instance of the
 	launcher, then enters a loop to check to see if the player has moved it 
-	in a direction. If it detects movement, it erases the old isntance of 
+	in a direction. If it detects movement, it erases the old instance of 
 	the launcher and draws it again in the appropriate position. When 
 	endgame flag is set, this function will exit its loop and terminate.
 
@@ -101,15 +101,15 @@ The following are the core functions of the game:
 	Saucer is set up in the setup_saucers() function where the saucer
 	structure is given its display string and starting position.
 
-	The saucer_factory() function randomly gerates a saucer every 1 to 5
+	The saucer_factory() function randomly generates a saucer every 1 to 5
 	seconds, and does so by generating a thread to animate the saucer. Once
-	the engame flag is set, the function terminates.
+	the endgame flag is set, the function terminates.
 
 	The animate_saucer() function checks to see if the saucer is still alive
 	and if the saucer hasn't reached the right side of the screen. If not,
 	the saucer will be animated to move right. Otherwise, it checks to see
-	which of the two situtions have occured. If the saucer is no longer
-	considered alive, it wil erase the old instance of the saucer and
+	which of the two situations have occurred. If the saucer is no longer
+	considered alive, it while erase the old instance of the saucer and
 	replace it with an explosion. If it has reached the right side of the
 	screen, it simply makes it disappear and increments the escape count. It
 	then resets all the values of the saucer and exits.
@@ -126,16 +126,16 @@ The following are the core functions of the game:
 	The animate_rocket() function animates the rocket upwards while the 
 	rocket is alive and hasn't hit the top of the screen. If either of those
 	situations arise, the old rocket is simply erased, the rocket's
-	attributes are reset, and the function extis.
+	attributes are reset, and the function exits.
 
 	The strike_check() function looks at the array of all the rockets and
 	the array of all the saucers. It checks to see if any rocket and saucer
 	are intersecting, and if they are, they are each set to dead, allowing
-	their respecitve animate functions to end their animations accordingly.
+	their respective animate functions to end their animations accordingly.
 
 4. Ammo drop handling
 	The ammo_drop is set up in the setup_ammo_drop() function where the
-	ammo_drop structure is given its dispaly string along with initializing
+	ammo_drop structure is given its display string along with initializing
 	its position values.
 
 	The ammo_factory() function checks a global ammo flag to see if an
@@ -168,7 +168,7 @@ launcher_threads: used to animate the launcher with the animate_launcher()
 
 saucer_factory_thread: used to randomly create saucers in the saucer_factory()
 		       function.
-saucer_threads: used to animate the suacers with the animate_saucer() function.
+saucer_threads: used to animate the saucers with the animate_saucer() function.
 
 ammo_drop_factory_thread: used to create ammo_drops at the appropriate times 
 			  with the ammo_drop_factory() function.
@@ -188,9 +188,9 @@ timer_thread: Counts down from 60.
 
 ** Critical Sections
 
-Critical sections throughout the code are to protect the cursor's postion as
+Critical sections throughout the code are to protect the cursor's position as
 several functions are consistently calling upon the cursor to move to an
-indicated postion. They are all protected by a mutex lock, and they protect
+indicated position. They are all protected by a mutex lock, and they protect
 the movement of the cursor to a position, printing a string, then parking the
 cursor.
 
