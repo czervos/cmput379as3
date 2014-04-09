@@ -120,6 +120,7 @@ int P1AMMO = AMMO; /* Player 1's ammo count */ // TODO put in own struct - requi
 int P1SCORE = 0; /* Player 1's score */ // TODO put in own struct
 int ESCAPE = 0; /* Number of escaped saucers */
 int TIMER = TIME; /* Time remaining in the game */ // TODO put in own struct
+int LAUNCHER_COL = 0;
 
 void setup_curses();
 void setup_players(struct launcher[]);
@@ -131,6 +132,7 @@ void *animate_rocket(void *);
 void *animate_saucer(void *);
 void *animate_ammo_drops(void *);
 void *saucer_factory(void *);
+void *rocket_factory(void *);
 void *control_input(void *);
 void *ammo_drop_factory(void *);
 void strike_check(struct rocket[], struct saucer[], struct ammo_drop[]);
@@ -152,14 +154,14 @@ int main(int argc, char *argv[])
         struct saucer saucer_props[MAX_SAUCERS];
         struct ammo_drop ammo_drop_props[MAX_AMMO_DROPS];
         pthread_t launcher_threads[MAX_PLAYERS];
-        pthread_t rocket_threads[MAX_ROCKETS];
+
         pthread_t saucer_factory_thread;
         pthread_t ammo_drop_factory_thread;
+        pthread_t rocket_factory_thread;
         pthread_t control_thread;
         pthread_t HUD_thread;
         pthread_t timer_thread;
         void *animate_launcher(); // TODO are these needed?
-        void *animate_rocket();
         char game_over[] = "Game Over!";
 
         /* Creates random seed based on pid */
@@ -189,23 +191,12 @@ int main(int argc, char *argv[])
         pthread_create(&saucer_factory_thread, NULL, saucer_factory, &saucer_props);
         pthread_create(&HUD_thread, NULL, HUD_display, NULL);
         pthread_create(&timer_thread, NULL, countdown_timer, NULL);
-        pthread_create(&ammo_drop_factory_thread, NULL, ammo_drop_factory, &ammo_drop_props); // TODO commenting this out prevents crash
+        pthread_create(&ammo_drop_factory_thread, NULL, ammo_drop_factory, &ammo_drop_props);
+        pthread_create(&rocket_factory_thread, NULL, rocket_factory, &rocket_props);
 
         /* Game loop */
         while (!QUIT_FLAG) {
-            /* Check if user wants to launch rocket and does so */
-            if (LAUNCH_FLAG == 1) {
-                for (i=0; i < MAX_ROCKETS; i++) { // TODO what to do when all MAX_ROCKETS are on screen?
-                    if (rocket_props[i].live == 0) {
-                        rocket_props[i].row = launcher_props[0].row - 1;
-                        rocket_props[i].col = launcher_props[0].col;
-                        rocket_props[i].live = 1;
-                        break;
-                    }
-                }
-                LAUNCH_FLAG = 0;
-                pthread_create(&rocket_threads[i], NULL, animate_rocket, &rocket_props[i]); // TODO error case
-            }
+
             /* Checks if any live rockets hit a saucer */
             strike_check(rocket_props, saucer_props, ammo_drop_props);
 
@@ -216,11 +207,17 @@ int main(int argc, char *argv[])
                     QUIT_FLAG = 1;
             /* Checks if ammo depleted and there are no live rockets for endgame condition */
             if (P1AMMO == 0) {
-                for (i=0; i < MAX_AMMO_DROPS; i++) {
-                    if (ammo_drop_props[i].live == 1)
+                for (i=0; i < MAX_ROCKETS; i++) {
+                    if (rocket_props[i].live == 1)
                             break;
-                    if (i == MAX_ROCKETS-1)
-                            QUIT_FLAG = 1;
+                    if (i == MAX_ROCKETS-1) {
+                        for (j=0; j < MAX_AMMO_DROPS; j++) {
+                            if (ammo_drop_props[j].live == 1)
+                                    break;
+                            if (j == MAX_AMMO_DROPS-1)
+                                    QUIT_FLAG = 1;
+                        }
+                    }
                 }
             }
             if (TIMER == 0)
@@ -278,9 +275,10 @@ void setup_players(struct launcher player_array[])
             /* Set string of launcher string */
             player_array[i].str = LAUNCHER;
             /* Set launcher row position */
-            player_array[i].row = LINES-2;
+            player_array[i].row =  LINES-2;
             /* Set launcher column posiition */
             player_array[i].col = (COLS-1)/2;
+            LAUNCHER_COL = player_array[i].col;
             /* Set launcher direction */
             player_array[i].dir = 0;
         }
@@ -359,11 +357,14 @@ void *animate_launcher(void *arg)
                 /* Check if launcher is on one of the sides of the terminal */
                 if ((player->dir == 1) && (player->col != COLS-1)) {
                     /* Sets launcher column position to new position based on direction */
-                    player->col += player->dir; 
+                    player->col += player->dir;
+                    LAUNCHER_COL += player->dir;
                 }
                 else if ((player->dir == -1) && (player->col != 0)) {
                     /* Sets launcher column position to new position based on direction */
-                    player->col += player->dir; 
+                    player->col += player->dir;
+                    LAUNCHER_COL += player->dir;
+
                 }
                 pthread_mutex_lock(&MX);
                 /* 
@@ -676,6 +677,38 @@ void *ammo_drop_factory(void *arg)
 
 /*
  * TODO add description for this function
+ * Detects a launch and fires the rocket
+ */
+void *rocket_factory(void *arg) {
+        struct rocket *rocket_array = arg;
+        pthread_t rocket_threads[MAX_ROCKETS];
+        void *animate_rocket();
+        int i;
+
+        while (!QUIT_FLAG) {
+            /* Check if user wants to launch rocket and does so */
+            if (LAUNCH_FLAG == 1) {
+                for (i=0; i < MAX_ROCKETS; i++) { // TODO what to do when all MAX_ROCKETS are on screen?
+                    if (rocket_array[i].live == 0) {
+                        rocket_array[i].row = (LINES-2) - 1;
+                        rocket_array[i].col = LAUNCHER_COL;
+                        rocket_array[i].live = 1;
+                        break;
+                    }
+                }
+                LAUNCH_FLAG = 0;
+                pthread_create(&rocket_threads[i], NULL, animate_rocket, &rocket_array[i]); // TODO error case
+            }
+        }
+        /* Sets all rockets to 0 for cleanup */
+        for (i=0; i < MAX_ROCKETS; i++)
+                rocket_array[i].live = 0;
+
+        pthread_exit(NULL);
+}
+
+/*
+ * TODO add description for this function
  * Detects control input
  */
 void *control_input(void *arg)
@@ -728,8 +761,8 @@ void strike_check(struct rocket rocket_array[], struct saucer saucer_array[], st
                             if ((rocket_array[i].col >= saucer_array[j].col) && 
                                 (rocket_array[i].col <= (saucer_array[j].col + 4))) {
 
-                                /* 1 in 4 chance to spawn an ammo drop */
-                                if ((1 + rand()%1) == 1) { // TODO set back to 4
+                                /* 1 in 3 chance to spawn an ammo drop */
+                                if ((1 + rand()%2) == 1) { // TODO set back to 4
                                     for (k = 0; k < MAX_AMMO_DROPS; k++) {
                                         if (ammo_drop_array[k].live == 0) {
                                             ammo_drop_array[k].live = 1;
