@@ -4,7 +4,7 @@ CMPUT 379 - Assignment 3
 Costa Zervos
 
 1. Installation:
-	1. Run make saucer
+	1. Run make saucer ALTERNATIVELY run make all
 	2. Run ./saucer
 
 2. Controls:
