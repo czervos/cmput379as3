@@ -207,6 +207,7 @@ int main(int argc, char *argv[])
                     QUIT_FLAG = 1;
             /* Checks if ammo depleted and there are no live rockets for endgame condition */
             if (P1AMMO == 0) {
+                usleep(TUNIT);
                 for (i=0; i < MAX_ROCKETS; i++) {
                     if (rocket_props[i].live == 1)
                             break;
@@ -762,7 +763,7 @@ void strike_check(struct rocket rocket_array[], struct saucer saucer_array[], st
                                 (rocket_array[i].col <= (saucer_array[j].col + 4))) {
 
                                 /* 1 in 3 chance to spawn an ammo drop */
-                                if ((1 + rand()%2) == 1) { // TODO set back to 4
+                                if ((1 + rand()%1) == 1) { // TODO set back to 4
                                     for (k = 0; k < MAX_AMMO_DROPS; k++) {
                                         if (ammo_drop_array[k].live == 0) {
                                             ammo_drop_array[k].live = 1;
