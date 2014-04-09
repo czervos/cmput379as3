@@ -140,6 +140,7 @@ void ammo_collection_check(struct ammo_drop[], struct launcher);
 void *HUD_display();
 void *countdown_timer();
 void splash_screen();
+void instruction_screen();
 void victory_screen();
 void escape_fail_screen();
 void no_ammo_fail_screen();
@@ -855,15 +856,65 @@ void *countdown_timer()
 void splash_screen()
 {
         char title[] = "SAUCER ATTACK";
-        char anykey[] = "Press any key to start playing";
+        char anykey[] = "Press any key to start playing or i for instructions";
         char c;
+        int active_screen = 1;
 
         mvprintw(LINES/2, (COLS-strlen(title))/2, title);
         mvprintw(LINES/2+1, (COLS-strlen(anykey))/2, anykey);
         move(LINES-1, COLS-1); /* Park cursor */
 
-        c = getch();
+        while (active_screen) {
+            c = getch();
+            if (c == 'i')
+                    instruction_screen();
+            else {
+                    clear();
+                    active_screen = 0;
+            }
+        }
+}
+
+/*
+ * TODO add description for this function
+ * Instruction screen
+ */
+void instruction_screen()
+{
+        char title[] = "Instructions:";
+        char i1[] = "Defend Earth!";
+        char i2[] = "- The aliens have opened a wormhole that will last 60 seconds!";
+        char i3[] = "- Do not let 10 alien saucers bypass our defences within that time!";
+        char i4[] = "- Do not run out of ammo or Earth will be defenseless!";
+        char i5[] = "- Pick up ammo drops (%) that may drop from the saucers!";
+        char i6[] = "Good luck!";
+        char i7[] = "Move: ARROW KEYS";
+        char i8[] = "Shoot: SPACEBAR";
+        char i9[] = "Quit: SHIFT-Q";
+        char anykey[] = "Press any key to start playing";
+        char newline[] = "\n";
+        char controls[] = "CONTROLS";
+
         clear();
+        mvprintw(LINES/2-5, (COLS-strlen(title))/2, title);
+        mvprintw(LINES/2-4, 5, i1);
+        mvprintw(LINES/2-3, 5, i2);
+        mvprintw(LINES/2-2, 5, i3);
+        mvprintw(LINES/2-1, 5, i4);
+        mvprintw(LINES/2, 5, i5);
+        mvprintw(LINES/2+1, 5, i6);
+
+        mvprintw(LINES/2+2, 0, newline);
+        mvprintw(LINES/2+3, 5, controls);
+        mvprintw(LINES/2+4, 9, i7);
+        mvprintw(LINES/2+5, 9, i8);
+        mvprintw(LINES/2+6, 9, i9);
+
+        mvprintw(LINES/2+7, 0, newline);
+        mvprintw(LINES/2+8, 5, anykey);
+        move(LINES-1, COLS-1); /* Park cursor */
+
+
 }
 
 /*
