@@ -1,0 +1,199 @@
+CMPUT 379 - Assignment 3
+Costa Zervos
+
+**** User Documentation
+
+When the game starts, a splash screen will appear which has the title of the
+game and prompts the user to press "i" for instructions or to press any other
+key to start the game.
+
+When the user presses "i", the instruction screen will show up where the rules
+of the game are described along with the controls. The user is then prompted to
+press any key to start the game.
+
+When the game starts, the user sees HUD at the bottom of the screen which shows
+the player's score, ammo count, escaped saucers, and time remaining.
+
+	Score: this will increment by 100 points for every hit on a
+	       saucer.
+	Ammo: the player's ammo count. This decreases when the user fires a
+	      rocket.
+	Escaped Saucers:The number of saucers that have made it across the
+			 screen.
+	Time Left: The time remaining in the game.
+
+The user can also the the launcher that they can control with using the arrow
+keys LEFT and RIGHT. They can also fire rockets by hitting SPACEBAR.
+
+Saucers begin to appear on the left side of the screen in the top 3 rows, and 
+will move across the screen at various speeds. Once they reach the right side
+of the screen, they will escape and the escape saucers count will increment.
+
+The user can fire their rockets at the saucers, causing them to explode and
+increments the player's score. When they explode, they have a 50% chance of 
+dropping ammo, which will fall down. If the player lines up the launcher with
+the ammo drop as it reaches the bottom, the player will collect the ammo and
+increment their ammo count.
+
+The game's endgame conditions are as follows:
+	Ammo failure: 	If the user runs out of ammo and there are no active
+		      	rockets flying on the screen or there are no ammo drops
+		      	falling, the player will lose.
+	Escape failure: If 10 saucers reach the right side of the screen, the
+			player will lose.
+	Victory:	If the time runs out without any of the failure
+			conditions triggering, the player will win.
+
+Upon triggering the endgame, the interface will say GAME OVER, then switch to
+a failure/victory screen, depending on which endgame condition was met. The user
+will then hit SHIFT-Q to quit the game.
+
+**** Developer Documentation
+
+** Code Structure
+
+The main function/thread serves 3 core purposes:
+
+1. Setting up the game
+	The main function calls several methods to initialize key aspects of the
+	game, such as curses, the launcher structure, an array of rocket
+	structures, an array of saucer structures, and an array of ammo_drop
+	structures.
+
+	After initializing these components, the main function then calls the
+	title screen.
+
+	After the user passes the title screen, the main function then creates
+	several threads to handle animating the launcher, receiving control
+	input, displaying and updating the HUD, counting down the timer, and
+	creating saucers, ammo drops, and rockets.
+
+2. Handing the game loop
+	After the initial setup, the main function enters the game loop. This
+	loop continues as long as no endgame conditions have been met. In this
+	loop, the main function calls a function to see if any of the live
+	rockets have hit any of the live saucers, and also calls a function
+	to see if any of the live ammo drops have been collected by the
+	launcher. It also checks to see if any of the endgame conditions have
+	been met.
+
+3. Endgame cleanup
+	After an endgame condition has been met, the main function prints the 
+	game over text and then cleans up any rockets that may still be active.
+	it then displays the appropriate endgame screen.
+
+The following are the core functions of the game:
+   *Note: several of these functions are handled in their own threads, which 
+	  will be explained in the thread section of the design documentation)
+
+1. Launcher Handling
+	The launcher is set up in the setup_players() function, where the
+	launcher structure is initialized to its display string and starting 
+	position.
+
+	The animate_launcher() function displays the initial instance of the
+	launcher, then enters a loop to check to see if the player has moved it 
+	in a direction. If it detects movement, it erases the old isntance of 
+	the launcher and draws it again in the appropriate position. When 
+	endgame flag is set, this function will exit its loop and terminate.
+
+2. Saucer Handling
+	Saucer is set up in the setup_saucers() function where the saucer
+	structure is given its display string and starting position.
+
+	The saucer_factory() function randomly gerates a saucer every 1 to 5
+	seconds, and does so by generating a thread to animate the saucer. Once
+	the engame flag is set, the function terminates.
+
+	The animate_saucer() function checks to see if the saucer is still alive
+	and if the saucer hasn't reached the right side of the screen. If not,
+	the saucer will be animated to move right. Otherwise, it checks to see
+	which of the two situtions have occured. If the saucer is no longer
+	considered alive, it wil erase the old instance of the saucer and
+	replace it with an explosion. If it has reached the right side of the
+	screen, it simply makes it disappear and increments the escape count. It
+	then resets all the values of the saucer and exits.
+
+3. Rocket Handling
+	The rocket is set up in the setup_rockets() function where the rocket
+	structure is given its display string along with initializing its
+	position values.
+	
+	The rocket_factory() function checks a global launch flag to see if a 
+	rocket has been launched, then if it is true, it creates a new rocket
+	in the position of the launcher.
+
+	The animate_rocket() function animates the rocket upwards while the 
+	rocket is alive and hasn't hit the top of the screen. If either of those
+	situations arise, the old rocket is simply erased, the rocket's
+	attributes are reset, and the function extis.
+
+	The strike_check() function looks at the array of all the rockets and
+	the array of all the saucers. It checks to see if any rocket and saucer
+	are intersecting, and if they are, they are each set to dead, allowing
+	their respecitve animate functions to end their animations accordingly.
+
+4. Ammo drop handling
+	The ammo_drop is set up in the setup_ammo_drop() function where the
+	ammo_drop structure is given its dispaly string along with initializing
+	its position values.
+
+	The ammo_factory() function checks a global ammo flag to see if an
+	ammo_drop should be spawned. If this is the case, it creates a new ammo
+	drop.
+
+	The animate_ammo_drop() function animates the ammo_drop downward while
+	the ammo_drop is alive and it hasn't reached the bottom of the screen.
+	If any of these cases occur, the ammo is erased and the function exits.
+
+	The strike_check() function gives a random (50%) chance for the ammo
+	drop to occur. If it is successful, it sets the global ammo flag to true
+	and gives the ammo_drop structure the position of the successful rocket
+	strike so that the ammo drops from there.
+
+5. Control handling
+	The control_input() function runs a loop while the end gameflag is not
+	set that checks to see what button the user has entered. If the user
+	enters 'Q', it sets the endgame flag. If the user enters the left or
+	right keys, it sets the launcher's direction appropriately. If the user
+	enters spacebar, it sets the launch flag, allowing the rocket_factory()
+	function to know to create a rocket.
+
+** Threads
+
+The following threads are used:
+
+launcher_threads: used to animate the launcher with the animate_launcher() 
+		  function when the user inputs control.
+
+saucer_factory_thread: used to randomly create saucers in the saucer_factory()
+		       function.
+saucer_threads: used to animate the suacers with the animate_saucer() function.
+
+ammo_drop_factory_thread: used to create ammo_drops at the appropriate times 
+			  with the ammo_drop_factory() function.
+ammo_drop_threads: animates the ammo_drops with the animate_ammo_drop()
+		   function.
+
+rocket_factory_thread: creates rockets when triggered by the user with the 
+		       rocket_factory() function.
+rocket_threads: animates the rockets upward with the animate_rocket() function.
+
+control_thread: uses the control_input() function to constantly checks for user 
+		input and acts appropriately.
+
+HUD_thread: Creates and constantly updates the HUD at the bottom of the screen.
+
+timer_thread: Counts down from 60.
+
+** Critical Sections
+
+Critical sections throughout the code are to protect the cursor's postion as
+several functions are consistently calling upon the cursor to move to an
+indicated postion. They are all protected by a mutex lock, and they protect
+the movement of the cursor to a position, printing a string, then parking the
+cursor.
+
+These critical sections occur in the following functions: animate_launcher(),
+animate_rocket(), animate_saucer(), animate_ammo_drops(), and HUD_display(). 
+
